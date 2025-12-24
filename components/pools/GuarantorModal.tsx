@@ -47,7 +47,7 @@ const GuarantorModal: React.FC<GuarantorModalProps> = ({ poolId, userId, onClose
                     </div>
                     <h3 className="text-xl font-bold text-gray-900">Guarantors Required</h3>
                     <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-                        This is a high-value pool (>₦100k). To maintain trust, you need <strong>2 verified guarantors</strong> to vouch for you before joining.
+                        This is a high-value pool ({'>'}₦100k). To maintain trust, you need <strong>2 verified guarantors</strong> to vouch for you before joining.
                     </p>
                 </div>
 
