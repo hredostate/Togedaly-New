@@ -184,6 +184,23 @@ const Wallet: React.FC = () => {
     getCurrentUser();
   }, []);
   
+  // Auth guard: Show message if user is not authenticated
+  if (user === null) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Please sign in to access your wallet.</p>
+      </div>
+    );
+  }
+  
   async function topup() {
     if (!user || !user.email) {
         addToast({title: 'Authentication Error', desc: 'Please sign in to fund your wallet.', emoji: '🔒'});

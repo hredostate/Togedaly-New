@@ -1,12 +1,23 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
+import { supabase } from '../../supabaseClient';
 import { getUserReputation } from '../../services/reputationService';
 import type { UserReputation } from '../../types';
 
 const ReputationTab: React.FC = () => {
-    const { data: reputation, isLoading: loading } = useSWR<UserReputation | null>(['user-reputation', 1, 'mock-user-id'], ([_, orgId, userId]) => getUserReputation(orgId as number, userId as string));
+    const [user, setUser] = useState<any>(null);
 
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    }, []);
+
+    const { data: reputation, isLoading: loading } = useSWR<UserReputation | null>(
+        user ? ['user-reputation', 1, user.id] : null,
+        ([_, orgId, userId]) => getUserReputation(orgId as number, userId as string)
+    );
+
+    if (!user) return <div>Loading user information...</div>;
     if (loading) return <div>Loading reputation...</div>;
     if (!reputation) return <div>Could not load reputation data.</div>;
 

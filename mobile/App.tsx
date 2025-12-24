@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 
-const WEB_URL = 'https://yourapp.com'; // your PWA URL
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://togedaly.com';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
