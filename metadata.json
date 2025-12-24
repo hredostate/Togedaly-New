@@ -1,0 +1,8 @@
+{
+  "name": "Togedaly AI Adviser",
+  "description": "An AI-powered application that provides witty Nigerian-style toasts for user actions and a personalized financial adviser feed, built on the Togedaly community investment platform concept.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

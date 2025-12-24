@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Togedaly AI Adviser</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#4F46E5" />
+    
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                DEFAULT: "#4F46E5", // indigo-600
+                50: "#EEF2FF",
+                100: "#E0E7FF",
+                200: "#C7D2FE",
+                300: "#A5B4FC",
+                400: "#818CF8",
+                500: "#6366F1",
+                600: "#4F46E5",
+                700: "#4338CA",
+                800: "#3730A3",
+                900: "#312E81",
+              },
+              accent: {
+                amber: "#FDE68A",
+                emerald: "#A7F3D0",
+                violet: "#EDE9FE",
+              },
+            },
+            spacing: {
+              'safe': 'env(safe-area-inset-bottom)',
+            },
+            borderRadius: { xl: "1rem", "2xl": "1.25rem", "3xl": "1.5rem" },
+            boxShadow: { 
+              soft: "0 4px 20px -2px rgba(0,0,0,0.05)",
+              glow: "0 0 15px rgba(79, 70, 229, 0.3)" 
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out',
+              'fade-in-up': 'fadeInUp 0.5s ease-out',
+              'pulse-slow': 'pulse 3s infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+            }
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: 'Outfit', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      
+      /* Initial Loader Styles */
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+      .logo-mark {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #4F46E5, #818CF8);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 32px;
+        font-weight: bold;
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+        animation: pulse 2s infinite;
+      }
+      
+      /* Utility: Hide Scrollbar */
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      
+      /* High Contrast Mode Overrides */
+      body.high-contrast {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      body.high-contrast * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      body.high-contrast .bg-slate-50, 
+      body.high-contrast .bg-white,
+      body.high-contrast .bg-slate-100,
+      body.high-contrast .bg-brand-50 {
+        background-color: #ffffff !important;
+        border: 2px solid #000000 !important;
+      }
+      body.high-contrast .text-gray-500,
+      body.high-contrast .text-gray-600 {
+        color: #000000 !important;
+      }
+      body.high-contrast .bg-brand {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: 2px solid #000000;
+      }
+      body.high-contrast .text-brand {
+        color: #000000 !important;
+        text-decoration: underline;
+        font-weight: bold;
+      }
+      body.high-contrast button, 
+      body.high-contrast a, 
+      body.high-contrast input, 
+      body.high-contrast select {
+        border: 2px solid #000000 !important;
+      }
+      body.high-contrast button:focus,
+      body.high-contrast a:focus {
+        outline: 4px solid #000000 !important;
+        outline-offset: 2px !important;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.80.0",
+    "next/": "https://aistudiocdn.com/next@^16.0.1/",
+    "recharts": "https://aistudiocdn.com/recharts@^2.12.7",
+    "@playwright/test": "https://aistudiocdn.com/@playwright/test@^1.56.1",
+    "openai": "https://aistudiocdn.com/openai@^6.8.1",
+    "swr": "https://aistudiocdn.com/swr@^2.3.6",
+    "expo-notifications": "https://aistudiocdn.com/expo-notifications@^0.32.12",
+    "react-native": "https://aistudiocdn.com/react-native@^0.82.1",
+    "react-native-webview": "https://aistudiocdn.com/react-native-webview@^13.16.0",
+    "expo-device": "https://aistudiocdn.com/expo-device@^8.0.9",
+    "expo-server-sdk": "https://aistudiocdn.com/expo-server-sdk@^4.0.0",
+    "idb": "https://aistudiocdn.com/idb@^8.0.3",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^11.0.0",
+    "react-window": "https://aistudiocdn.com/react-window@^1.8.10"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-50 text-gray-900 selection:bg-brand-100 selection:text-brand-900">
+    <div id="initial-loader">
+      <div class="logo-mark">T</div>
+      <div style="margin-top: 20px; font-weight: 700; color: #1e293b; letter-spacing: 0.1em; font-size: 14px;">TOGEDALY</div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('SW registered');
+          }).catch(err => console.log('SW fail', err));
+        });
+      }
+      
+      // Remove loader when app mounts
+      window.addEventListener('load', () => {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+          // Small delay to ensure React paints
+          setTimeout(() => {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+          }, 200);
+        }
+      });
+    </script>
+  </body>
+</html>

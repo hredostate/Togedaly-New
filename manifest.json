@@ -1,0 +1,21 @@
+{
+  "name": "Togedaly AI Adviser",
+  "short_name": "Togedaly",
+  "description": "An AI-powered application that provides witty Nigerian-style toasts for user actions and a personalized financial adviser feed, built on the Togedaly community investment platform concept.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
