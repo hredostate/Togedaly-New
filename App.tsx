@@ -59,6 +59,7 @@ const LoanRequest = lazy(() => import('./pages/LoanRequest'));
 const Owambe = lazy(() => import('./pages/Owambe'));
 const Disputes = lazy(() => import('./pages/Disputes'));
 const OrgDashboardPage = lazy(() => import('./pages/admin/OrgDashboardPage'));
+const Logistics = lazy(() => import('./pages/Logistics'));
 
 
 // Types
@@ -69,7 +70,7 @@ import { useNudges } from './hooks/useNudges';
 export type Page = 
   'landing' | 'explore' | 'dashboard' | 'wallet' | 'standing' | 'security' | 'notifications' | 'auth' | 
   'admin' | 'kyc' | 'poolDetails' | 'ventureDetails' | 'legal' | 'ajoHealth' | 'ajoGroupDetail' | 'ajoMemberDetail' | 
-  'ttfLeaderboard' | 'templateManager' | 'ops' | 'status' | 'treasury' | 'poolHealth' | 'rotationPayouts' | 'suppliers' | 'groupbuys' | 'settlements' | 'cycleRotation' | 'reconciliation' | 'dataBI' | 'loanRequest' | 'owambe' | 'disputes' | 'orgDashboard';
+  'ttfLeaderboard' | 'templateManager' | 'ops' | 'status' | 'treasury' | 'poolHealth' | 'rotationPayouts' | 'suppliers' | 'groupbuys' | 'settlements' | 'cycleRotation' | 'reconciliation' | 'dataBI' | 'loanRequest' | 'owambe' | 'disputes' | 'orgDashboard' | 'logistics';
 
 const App: React.FC = () => {
     const [page, setPage] = useState<Page>('landing');
@@ -226,6 +227,7 @@ const App: React.FC = () => {
             case 'owambe': return <Owambe setPage={handleSetPage} />;
             case 'disputes': return <Disputes setPage={handleSetPage} />;
             case 'orgDashboard': return <OrgDashboardPage setPage={handleSetPage} orgId={pageContext?.orgId} />;
+            case 'logistics': return <Logistics setPage={handleSetPage} />;
             default: return <Landing setPage={handleSetPage} />;
         }
     };

@@ -1,4 +1,3 @@
-// FIX: Provide full content for the file to resolve module not found errors.
 import React, { useState } from 'react';
 import type { Page } from '../App';
 import Incidents from '../components/admin/ops/Incidents';
