@@ -1,12 +1,11 @@
 
 
-import { mockReconRuns, mockReconItems } from '../data/settlementMockData';
 import type { ReconRun, ReconItem } from '../types';
 
-let runsDb = [...mockReconRuns];
-let itemsDb = [...mockReconItems];
+let runsDb: ReconRun[] = [];
+let itemsDb: ReconItem[] = [];
 
-// NEW: CSV Parser logic
+// CSV Parser logic
 export function parseCSV(csvText: string): any[] {
   const lines = csvText.split('\n').filter(line => line.trim().length > 0);
   if (lines.length < 2) return [];
@@ -28,7 +27,7 @@ export async function getReconRuns(orgId: number): Promise<ReconRun[]> {
 }
 
 export async function getReconItems(): Promise<ReconItem[]> {
-    console.log("MOCK: getReconItems (all)");
+    console.log("getReconItems (all)");
     await new Promise(res => setTimeout(res, 400));
     return [...itemsDb];
 }

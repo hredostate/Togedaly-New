@@ -1,12 +1,16 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { mockAjoPayments, mockUserProfiles } from '../data/ajoMockData';
-import { mockDefaultEvents } from '../data/standingMockData';
-import { mockUserRiskProfiles } from '../data/riskMockData';
-import { mockLegacyPools } from '../data/mockData';
+import type { AjoPayment, UserProfile, DefaultEvent, UserRiskProfile, LegacyPool } from '../types';
 
 const API_KEY = import.meta.env.VITE_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+
+// In-memory stores (to be replaced with real DB)
+let ajoPayments: AjoPayment[] = [];
+let userProfiles: UserProfile[] = [];
+let defaultEvents: DefaultEvent[] = [];
+let userRiskProfiles: UserRiskProfile[] = [];
+let legacyPools: LegacyPool[] = [];
 
 interface DocChunk {
     id: string;
@@ -73,10 +77,10 @@ async function buildUserContext(userId: string): Promise<DocChunk[]> {
     const chunks: DocChunk[] = [];
 
     // 1. Payment History
-    const payments = mockAjoPayments.filter(p => p.user_id === userId);
+    const payments = ajoPayments.filter(p => p.user_id === userId);
     payments.forEach(p => {
         const status = p.paid_at ? (new Date(p.paid_at) <= new Date(p.due_date) ? 'Paid on time' : 'Paid late') : (new Date() > new Date(p.due_date) ? 'Missed/Overdue' : 'Upcoming');
-        const poolName = mockLegacyPools.find(l => l.id === p.group_id)?.name || 'Unknown Pool';
+        const poolName = legacyPools.find(l => l.id === p.group_id)?.name || 'Unknown Pool';
         chunks.push({
             id: `hist-pay-${p.id}`,
             text: `Payment for ${poolName} (Amount: ₦${p.amount_kobo/100}) due on ${p.due_date}. Status: ${status}.`,
@@ -85,7 +89,7 @@ async function buildUserContext(userId: string): Promise<DocChunk[]> {
     });
 
     // 2. Defaults/Penalties
-    const defaults = mockDefaultEvents.filter(d => d.user_id === userId);
+    const defaults = defaultEvents.filter(d => d.user_id === userId);
     defaults.forEach(d => {
         chunks.push({
             id: `hist-def-${d.id}`,
@@ -95,7 +99,7 @@ async function buildUserContext(userId: string): Promise<DocChunk[]> {
     });
 
     // 3. Risk/Profile
-    const profile = mockUserRiskProfiles.find(p => p.user_id === userId);
+    const profile = userRiskProfiles.find(p => p.user_id === userId);
     if (profile) {
         chunks.push({
             id: `hist-risk-${userId}`,

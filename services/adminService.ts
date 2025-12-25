@@ -1,71 +1,39 @@
 
 // services/adminService.ts
 
-// FIX: Corrected imports. Aliased LegacyPool to Pool to match usage.
-import type { KycDocument, AdminRiskEvent, AuditLog, LegacyPool as Pool, KycLevel, AdminActionRequest, AdminActionStatus, AdminUser, UserRole } from '../types';
-// FIX: Corrected imports. Aliased mockLegacyPools to mockPools.
-import { mockLegacyPools as mockPools } from '../data/mockData';
-import { mockIncomingTransfers } from '../data/dvaMockData';
-import { mockTreasuryPolicy } from '../data/treasuryMockData';
-import { mockUserProfiles } from '../data/ajoMockData';
+import type { KycDocument, AdminRiskEvent, AuditLog, LegacyPool as Pool, KycLevel, AdminActionRequest, AdminActionStatus, AdminUser, UserRole, UserProfile, IncomingTransfer, PoolTreasuryPolicy } from '../types';
 import { recordIdempotency } from './idempotencyService';
 import { decideRoute } from './routingService';
 import { logAdminAction, fetchAuditLogs } from './auditService';
 
-// --- MOCK DATA ---
-let mockKycQueue: KycDocument[] = [
-    { id: 'doc-101', user_id: 'user-abc-123', doc_type: 'id_card', storage_path: '/kyc/user-abc-123/id.jpg', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString() },
-    { id: 'doc-102', user_id: 'user-def-456', doc_type: 'selfie', storage_path: '/kyc/user-def-456/selfie.jpg', status: 'pending', created_at: new Date(Date.now() - 172800000).toISOString() },
-];
-
-let mockRiskEvents: AdminRiskEvent[] = [
-    { id: 'risk-1', user_id: 'user-xyz-789', source: 'system', code: 'velocity_user', severity: 'high', details: { count: 5 }, created_at: new Date().toISOString() },
-    { id: 'risk-2', user_id: 'user-ghi-012', source: 'paystack', code: 'many_cards', severity: 'medium', details: { cards_used: 4 }, created_at: new Date(Date.now() - 3600000).toISOString() },
-];
-
-// Mock store for admin action requests
-let mockActionRequests: AdminActionRequest[] = [
-    {
-        id: 101,
-        org_id: 1,
-        pool_id: '1',
-        action_type: 'treasury_policy_update',
-        target_table: 'pool_treasury_policy',
-        target_id: '1',
-        payload: { max_draw_pct: 0.55, kill_draws: true },
-        status: 'pending',
-        requested_by: 'admin-user-2', // Someone else
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-        updated_at: new Date(Date.now() - 7200000).toISOString(),
-    }
-];
-
-// Mock Admin Users (extended from user profiles)
-let adminUsers: AdminUser[] = mockUserProfiles.map((u, i) => ({
-    ...u,
-    role: i === 0 ? 'admin' : (i === 1 ? 'support' : (i === 2 ? 'manager' : 'member')),
-    status: 'active',
-    joined_at: new Date(Date.now() - (i+1) * 30 * 86400000).toISOString(),
-}));
+// --- IN-MEMORY DATA (to be replaced with real DB) ---
+let kycQueue: KycDocument[] = [];
+let riskEvents: AdminRiskEvent[] = [];
+let actionRequests: AdminActionRequest[] = [];
+let adminUsers: AdminUser[] = [];
+let pools: Pool[] = [];
+let incomingTransfers: IncomingTransfer[] = [];
+let treasuryPolicies: Record<string, PoolTreasuryPolicy> = {};
+let userProfiles: UserProfile[] = [];
 
 // --- MOCK SERVICE FUNCTIONS ---
 
 export async function getKycQueue(): Promise<KycDocument[]> {
     console.log("MOCK: getKycQueue");
     await new Promise(resolve => setTimeout(resolve, 500));
-    return mockKycQueue;
+    return kycQueue;
 }
 
 export async function getPoolsForModeration(): Promise<Pool[]> {
      console.log("MOCK: getPoolsForModeration");
      await new Promise(resolve => setTimeout(resolve, 400));
-     return mockPools.filter(p => p.is_active);
+     return pools.filter(p => p.is_active);
 }
 
 export async function getRiskEvents(): Promise<AdminRiskEvent[]> {
     console.log("MOCK: getRiskEvents");
     await new Promise(resolve => setTimeout(resolve, 600));
-    return mockRiskEvents;
+    return riskEvents;
 }
 
 export async function getAuditTrail(): Promise<AuditLog[]> {
@@ -95,7 +63,7 @@ export async function updateUserRole(userId: string, newRole: UserRole, actorId:
 export async function getAdminActionRequests(orgId: number): Promise<AdminActionRequest[]> {
     console.log("MOCK: getAdminActionRequests", orgId);
     await new Promise(resolve => setTimeout(resolve, 400));
-    return mockActionRequests.filter(r => r.org_id === orgId && r.status === 'pending');
+    return actionRequests.filter(r => r.org_id === orgId && r.status === 'pending');
 }
 
 export async function submitAdminActionRequest(
@@ -123,7 +91,7 @@ export async function submitAdminActionRequest(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
     };
-    mockActionRequests.unshift(newReq);
+    actionRequests.unshift(newReq);
     return newReq;
 }
 
@@ -131,7 +99,7 @@ export async function approveAdminActionRequest(requestId: number, actorId: stri
     console.log("MOCK: approveAdminActionRequest", requestId);
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const req = mockActionRequests.find(r => r.id === requestId);
+    const req = actionRequests.find(r => r.id === requestId);
     if (!req) throw new Error("Request not found");
     
     if (req.requested_by === actorId) {
@@ -140,9 +108,13 @@ export async function approveAdminActionRequest(requestId: number, actorId: stri
 
     // Apply the change if it's a treasury update
     if (req.action_type === 'treasury_policy_update' && req.target_table === 'pool_treasury_policy') {
-        // We mutate the imported mock object directly to simulate DB update
-        Object.assign(mockTreasuryPolicy, req.payload);
-        mockTreasuryPolicy.updated_at = new Date().toISOString();
+        // Update the policy for the specific pool
+        const poolId = req.target_id;
+        if (!treasuryPolicies[poolId]) {
+            treasuryPolicies[poolId] = {} as PoolTreasuryPolicy;
+        }
+        Object.assign(treasuryPolicies[poolId], req.payload);
+        treasuryPolicies[poolId].updated_at = new Date().toISOString();
     }
 
     req.status = 'approved';
@@ -156,7 +128,7 @@ export async function rejectAdminActionRequest(requestId: number, reason: string
     console.log("MOCK: rejectAdminActionRequest", requestId);
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const req = mockActionRequests.find(r => r.id === requestId);
+    const req = actionRequests.find(r => r.id === requestId);
     if (!req) throw new Error("Request not found");
 
     req.status = 'rejected';
@@ -173,10 +145,10 @@ export async function reviewKycDocument(docId: string, approve: boolean, newLeve
     console.log(`MOCK: reviewKycDocument ${docId}`, { approve, newLevel, reason });
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const doc = mockKycQueue.find(d => d.id === docId);
+    const doc = kycQueue.find(d => d.id === docId);
     if (!doc) throw new Error("Document not found");
 
-    mockKycQueue = mockKycQueue.filter(d => d.id !== docId); // Remove from queue
+    kycQueue = kycQueue.filter(d => d.id !== docId); // Remove from queue
     
     await logAdminAction('mock-admin-id', 'kyc.review', `doc:${docId}`, { approve, newLevel, reason });
 }
@@ -185,7 +157,7 @@ export async function closePool(poolId: string, reason: string): Promise<void> {
     console.log(`MOCK: closePool ${poolId}`, { reason });
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    const pool = mockPools.find(p => p.id === poolId);
+    const pool = pools.find(p => p.id === poolId);
     if (!pool) throw new Error("Pool not found");
     // In a real app, you would mutate the state. Here we just log.
     
@@ -203,7 +175,7 @@ export async function resolveRiskEvent(eventId: string, note: string): Promise<v
      console.log(`MOCK: resolveRiskEvent ${eventId}`, { note });
      await new Promise(resolve => setTimeout(resolve, 500));
      
-     mockRiskEvents = mockRiskEvents.filter(e => e.id !== eventId);
+     riskEvents = riskEvents.filter(e => e.id !== eventId);
 
      await logAdminAction('mock-admin-id', 'risk.resolve', `risk:${eventId}`, { note });
 }
@@ -258,7 +230,7 @@ export async function getSkippedCredits(since?: string): Promise<any[]> {
     for (const a of audits) {
         const txId = a.meta?.tx_id || a.meta?.details?.tx_id;
         if (!txId) continue;
-        const it = mockIncomingTransfers.find(t => t.paystack_tx_id === txId);
+        const it = incomingTransfers.find(t => t.paystack_tx_id === txId);
         if (!it) continue;
         items.push({ when: a.created_at, user: it.user_id, amount_kobo: it.amount_kobo, narration: it.narration, paystack_tx_id: it.paystack_tx_id });
     }
@@ -272,7 +244,7 @@ export async function reapplyCredit(tx_id: number): Promise<{ ok: boolean, skipp
         return { ok: true, skipped: 'duplicate_reapply' };
     }
 
-    const it = mockIncomingTransfers.find(t => t.paystack_tx_id === tx_id);
+    const it = incomingTransfers.find(t => t.paystack_tx_id === tx_id);
     if (!it) throw new Error('incoming_transfer_not_found');
 
     const route = await decideRoute(it.user_id, it.narration || '');
@@ -317,7 +289,7 @@ export async function reapplyCreditBulk(
     for (const a of pageAudits) {
         const txId = a.meta?.tx_id || a.meta?.details?.tx_id;
         if (!txId) continue;
-        const it = mockIncomingTransfers.find(t => t.paystack_tx_id === txId);
+        const it = incomingTransfers.find(t => t.paystack_tx_id === txId);
         if (!it) continue;
         const route = await decideRoute(it.user_id, it.narration || '');
         candidates.push({ tx_id: txId, created_at: a.created_at, user_id: it.user_id, amount_kobo: it.amount_kobo, narration: it.narration, route });

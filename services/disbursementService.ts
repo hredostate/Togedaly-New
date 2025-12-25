@@ -1,15 +1,14 @@
 // services/disbursementService.ts
-import type { Payout, PayoutRecipient, InvoicePayoutLink } from '../types';
-import { mockCyclePayouts, mockSupplierPayouts, mockPayoutRecipients } from '../data/disbursementMockData';
-import { mockUserProfiles } from '../data/ajoMockData';
-import { mockSuppliers } from '../data/supplierMockData';
+import type { Payout, PayoutRecipient, InvoicePayoutLink, UserProfile, Supplier } from '../types';
 import { getBanks } from './bankService';
-import { mockInvoicePayoutLinks } from '../data/settlementMockData';
 
-// Mock DBs
-let recipientsDb = [...mockPayoutRecipients];
-let cyclePayoutsDb = [...mockCyclePayouts];
-let supplierPayoutsDb = [...mockSupplierPayouts];
+// In-memory DBs (to be replaced with real DB)
+let recipientsDb: PayoutRecipient[] = [];
+let cyclePayoutsDb: Array<any> = [];
+let supplierPayoutsDb: Array<any> = [];
+let userProfiles: UserProfile[] = [];
+let suppliers: Supplier[] = [];
+let invoicePayoutLinks: InvoicePayoutLink[] = [];
 
 export async function getPendingPayouts(): Promise<Payout[]> {
     await new Promise(res => setTimeout(res, 500));
@@ -18,7 +17,7 @@ export async function getPendingPayouts(): Promise<Payout[]> {
     const pendingSupplierPayouts = supplierPayoutsDb.filter(p => p.status === 'pending');
 
     const mappedCyclePayouts: Payout[] = pendingCyclePayouts.map(p => {
-        const beneficiary = mockUserProfiles.find(u => u.id === p.beneficiary_user_id);
+        const beneficiary = userProfiles.find(u => u.id === p.beneficiary_user_id);
         return {
             id: p.id,
             org_id: 1,
@@ -39,7 +38,7 @@ export async function getPendingPayouts(): Promise<Payout[]> {
     });
 
     const mappedSupplierPayouts: Payout[] = pendingSupplierPayouts.map(p => {
-        const beneficiary = mockSuppliers.find(s => s.id === p.supplier_id);
+        const beneficiary = suppliers.find(s => s.id === p.supplier_id);
         return {
             id: p.id,
             org_id: p.org_id,
@@ -76,13 +75,13 @@ export async function createPayoutRecipient(
     const bank = banks.find(b => b.code === payload.bank_code);
     if (!bank) throw new Error("Invalid bank code");
 
-    let account_name = 'MOCK ACCOUNT NAME';
+    let account_name = 'ACCOUNT NAME';
     if (payload.type === 'user') {
-        const user = mockUserProfiles.find(u => u.id === payload.id);
+        const user = userProfiles.find(u => u.id === payload.id);
         if (!user) throw new Error("User not found");
         account_name = user.name.toUpperCase();
     } else {
-        const supplier = mockSuppliers.find(s => s.id === Number(payload.id));
+        const supplier = suppliers.find(s => s.id === Number(payload.id));
         if (!supplier) throw new Error("Supplier not found");
         account_name = supplier.business_name.toUpperCase();
     }
@@ -171,7 +170,7 @@ export async function queuePayout(payload: Partial<Payout>): Promise<Payout> {
 // FIX: Added missing export for linkPayoutToInvoice
 export async function linkPayoutToInvoice(invoiceId: number, payoutId: number, amount: number): Promise<void> {
     await new Promise(res => setTimeout(res, 300));
-    console.log("MOCK: linkPayoutToInvoice", { invoiceId, payoutId, amount });
+    console.log("linkPayoutToInvoice", { invoiceId, payoutId, amount });
     
     const newLink: InvoicePayoutLink = {
         id: Date.now(),
@@ -181,5 +180,5 @@ export async function linkPayoutToInvoice(invoiceId: number, payoutId: number, a
         created_at: new Date().toISOString()
     };
     
-    mockInvoicePayoutLinks.push(newLink);
+    invoicePayoutLinks.push(newLink);
 }
