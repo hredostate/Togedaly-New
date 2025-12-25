@@ -1,6 +1,86 @@
 -- Migration: Admin Tables for Full CRUD Operations
 -- Created: 2024-12-25
 -- Description: Creates all tables needed for admin panel with proper RLS policies
+--
+-- PREREQUISITES:
+-- This migration assumes the following tables already exist:
+--
+-- 1. 'profiles' table with at least these fields:
+--   - id (UUID, references auth.users)
+--   - email (TEXT)
+--   - name (TEXT)
+--   - phone (TEXT)
+--   - role (TEXT) - should be one of: 'admin', 'manager', 'support', 'member'
+--   - status (TEXT) - should be one of: 'active', 'suspended', 'inactive'
+--   - created_at (TIMESTAMPTZ)
+--   - updated_at (TIMESTAMPTZ)
+--
+-- 2. 'pools' table for pool management (referenced in admin functions)
+--
+-- If profiles table doesn't exist, it will be created below:
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'member' CHECK (role IN ('admin', 'manager', 'support', 'member')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'inactive')),
+  kyc_level TEXT CHECK (kyc_level IN ('basic', 'plus', 'pro')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON profiles(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+
+-- Enable RLS on profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT
+  USING (auth.uid() = id);
+
+-- Users can update their own profile (except role and status)
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE
+  USING (auth.uid() = id);
+
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles" ON profiles
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid() 
+      AND p.role IN ('admin', 'manager')
+    )
+  );
+
+-- Admins can update any profile
+CREATE POLICY "Admins can update any profile" ON profiles
+  FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid() 
+      AND p.role = 'admin'
+    )
+  );
+
+-- Trigger for profiles updated_at
+CREATE OR REPLACE FUNCTION update_profiles_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_profiles_timestamp BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION update_profiles_updated_at();
 
 -- ============================================================================
 -- 1. KYC Documents Table
