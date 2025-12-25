@@ -5,7 +5,7 @@ import { mockDefaultEvents } from '../data/standingMockData';
 import { mockUserRiskProfiles } from '../data/riskMockData';
 import { mockLegacyPools } from '../data/mockData';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = import.meta.env.VITE_API_KEY;
 const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 interface DocChunk {
