@@ -13,6 +13,7 @@ const AjoMemberDetail: React.FC<{ member: (AjoMemberDetails | TtfEntry | { user_
   const { add: addToast } = useToasts();
 
   useEffect(() => {
+    if (!member.user_id) return;
     setLoading(true);
     getAjoMemberTimeline(member.group_id, member.user_id)
         .then(setTimeline)
@@ -21,6 +22,7 @@ const AjoMemberDetail: React.FC<{ member: (AjoMemberDetails | TtfEntry | { user_
   }, [member.group_id, member.user_id, addToast]);
   
   const handleSendReminder = async () => {
+      if (!member.user_id) return;
       setSending(true);
       try {
           await remindAjoMember(member.group_id, member.user_id, channel, body, 'naija');

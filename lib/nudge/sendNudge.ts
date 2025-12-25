@@ -1,6 +1,6 @@
 
 // lib/nudge/sendNudge.ts (pseudo)
-import { supabaseAdmin as sb } from '@/lib/supabaseClient';
+import { supabaseAdmin as sb } from '../../supabaseClient';
 import * as ExpoServer from 'expo-server-sdk';
 
 const expo = new ExpoServer.Expo();
@@ -20,7 +20,7 @@ export async function sendNudge(nudge: {
       .eq('user_id', nudge.userId);
 
     const messages =
-      tokens?.map((t) => ({
+      tokens?.map((t: { token: string }) => ({
         to: t.token,
         sound: 'default' as const,
         body: nudge.message,

@@ -134,7 +134,7 @@ const WebhookSimulator: React.FC<{ accounts: VirtualAccount[] }> = ({ accounts }
 
         try {
             const result = await simulateChargeSuccessWebhook(mockPayload);
-            addToast({ title: 'Webhook Processed', desc: result.message, emoji: result.ok ? '✅' : '⚠️', timeout: 8000 });
+            addToast({ title: 'Webhook Processed', desc: result.message || '', emoji: result.ok ? '✅' : '⚠️', timeout: 8000 });
             // Refresh the transfers list to show the new incoming transfer
             mutate('incoming-transfers');
         } catch (e: any) {

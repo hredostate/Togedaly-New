@@ -44,7 +44,7 @@ export async function fetchAuditLogs(filters?: { action?: string, target?: strin
     
     let logs = [...auditLogs];
     if (filters?.action) logs = logs.filter(l => l.action === filters.action);
-    if (filters?.target) logs = logs.filter(l => l.target.includes(filters.target));
+    if (filters?.target) logs = logs.filter(l => l.target.includes(filters.target!));
     
     return logs.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }

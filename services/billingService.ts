@@ -169,7 +169,7 @@ export async function upsertBillingPlan(plan: Partial<BillingPlan>): Promise<Bil
     await new Promise(res => setTimeout(res, 500));
     
     // Enforce AI Nudges for all plans
-    const features = { ...plan.features, ai_nudges: true };
+    const features = { ...plan.features, ai_nudges: true, priority_support: plan.features?.priority_support ?? false };
 
     if (plan.id) {
         const idx = mockPlans.findIndex(p => p.id === plan.id);

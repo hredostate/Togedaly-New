@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { UserRiskProfile } from '../../../types';
-import { getAdminUserRiskProfiles } from '../../../services/riskService';
-import { revalidateKyc } from '../../../services/riskService';
+import type { UserRiskProfile } from '../../types';
+import { getAdminUserRiskProfiles } from '../../services/riskService';
+import { revalidateKyc } from '../../services/riskService';
 import { useToasts } from '../ToastHost';
 
 const RiskBadge: React.FC<{ score: number }> = ({ score }) => {
@@ -20,7 +20,7 @@ const RiskOverview: React.FC = () => {
         setLoading(true);
         getAdminUserRiskProfiles()
             .then(setRows)
-            .catch(e => addToast({ title: 'Error', desc: e.message || 'Could not load risk profiles', emoji: '😥'}))
+            .catch((e: unknown) => addToast({ title: 'Error', desc: (e as Error).message || 'Could not load risk profiles', emoji: '😥'}))
             .finally(() => setLoading(false));
     }, [addToast]);
     

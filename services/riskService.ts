@@ -63,7 +63,7 @@ export async function revalidateKyc(userId: string): Promise<{ ok: boolean; queu
     
     // In a real app, you'd fetch PII from a secure table. We check our mock data.
     const riskProfile = mockUserRiskProfiles.find(p => p.user_id === userId);
-    if (!riskProfile?.bvn && !riskProfile.data?.nin) {
+    if (!riskProfile?.data?.nin && !riskProfile?.bvn) {
         throw new Error('no_secure_record');
     }
 
