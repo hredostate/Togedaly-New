@@ -101,6 +101,7 @@ export interface LegacyPool {
 
     // Ownership
     created_by?: string;
+    created_at?: string;
 }
 
 // From services/payoutService.ts
@@ -232,6 +233,7 @@ export interface PoolTP {
     created_at: string;
     is_active: boolean;
     inflation_shield?: boolean; // New: Option to peg value to stablecoin
+    member_count?: number;
 }
 
 // NEW: Guarantor Request

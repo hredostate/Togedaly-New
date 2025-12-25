@@ -75,7 +75,7 @@ const LegacyPoolCard: React.FC<{ pool: LegacyPool, onClick: () => void, userLoca
     return (
          <button 
             onClick={isRestricted ? undefined : onClick}
-            disabled={isRestricted}
+            disabled={!!isRestricted}
             className={`rounded-2xl border p-4 block text-left w-full transition-all focus:outline-none focus:ring-2 focus:ring-brand relative overflow-hidden ${isRestricted ? 'bg-slate-50 border-slate-200 opacity-80 cursor-not-allowed' : 'bg-white border-slate-200 hover:border-brand hover:shadow-soft'}`}
         >
             {isRestricted && (

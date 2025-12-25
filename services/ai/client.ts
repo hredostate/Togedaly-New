@@ -20,7 +20,7 @@ export class AIClient {
             ...(json && { responseMimeType: 'application/json' }),
         }
       });
-      return response.text;
+      return response.text || '';
     } else {
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const r = await client.chat.completions.create({

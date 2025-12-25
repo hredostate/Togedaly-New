@@ -51,9 +51,9 @@ async function getEmbedding(text: string): Promise<number[] | null> {
     try {
         const result = await ai.models.embedContent({
             model: 'text-embedding-004',
-            content: { parts: [{ text }] }
+            contents: { parts: [{ text }] }
         });
-        return result.embedding?.values || null;
+        return result.embeddings?.[0]?.values || null;
     } catch (e) {
         console.warn("Embedding failed", e);
         return null;
