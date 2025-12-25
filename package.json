@@ -1,4 +1,3 @@
-
 {
   "name": "togedaly-ai-adviser",
   "private": true,
@@ -14,7 +13,7 @@
     "@supabase/supabase-js": "^2.80.0",
     "framer-motion": "^11.0.0",
     "idb": "^8.0.3",
-    "lucide-react": "^0.300.0",
+    "lucide-react": "^0.468.0",
     "next": "^14.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
