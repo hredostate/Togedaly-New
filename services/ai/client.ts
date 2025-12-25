@@ -2,13 +2,36 @@
 import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 
+// ⚠️ SECURITY WARNING: API keys exposed client-side via VITE_* environment variables
+// VITE_API_KEY and VITE_OPENAI_API_KEY are visible in the browser bundle
+// This is NOT suitable for production use as API keys can be extracted and abused
+//
+// TODO: Move AI operations to Next.js API routes for production
+// Create server-side endpoints that:
+// - Store API keys securely in server environment variables (without VITE_ prefix)
+// - Implement rate limiting per user
+// - Add request validation and sanitization
+// - Monitor and log API usage
+//
+// Example: Create /app/api/ai/generate/route.ts that handles AI calls server-side
+
 export type ModelChoice = 'gemini'|'openai';
 
 export interface GenerateArgs { system: string; prompt: string; json?: boolean; }
 
 export class AIClient {
   model: ModelChoice;
-  constructor(model: ModelChoice = 'gemini') { this.model = model; }
+  
+  // Note: Constructor logs warning about client-side API key exposure
+  // This is intentional for development awareness - should be removed when migrated to server-side
+  constructor(model: ModelChoice = 'gemini') { 
+    this.model = model;
+    // Runtime warning about client-side API key exposure (development only)
+    // TODO: Remove this warning once AI operations are moved to server-side API routes
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      console.warn('⚠️ WARNING: AI API keys exposed client-side. Move to server-side API routes for production.');
+    }
+  }
   async generate({ system, prompt, json }: GenerateArgs): Promise<string> {
     if (this.model === 'gemini') {
       const apiKey = import.meta.env.VITE_API_KEY;
