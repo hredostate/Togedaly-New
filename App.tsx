@@ -240,6 +240,7 @@ const App: React.FC = () => {
                 isAdmin={isAdmin}
                 onLogout={handleLogout}
                 onInboxToggle={() => setIsTrayOpen(!isTrayOpen)}
+                userId={user?.id}
             />
             {/* Add bottom padding for mobile nav */}
             <main className="max-w-6xl mx-auto px-4 py-6 flex-grow w-full pb-24 md:pb-6">

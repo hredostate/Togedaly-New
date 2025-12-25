@@ -438,7 +438,7 @@ const PoolDetails: React.FC<PoolDetailsProps> = ({ poolData, onBack, isAuthentic
             setShowReceipt(true);
 
             try {
-                await adjustTrust(5, 'On-time Ajo payment');
+                await adjustTrust(userId, 5, 'On-time Ajo payment');
                 const trustToast = await getNaijaToast('TRUST_INCREASE');
                 addToast({ ...trustToast, desc: `${trustToast.desc} (+5 Trust)` });
             } catch (e) {

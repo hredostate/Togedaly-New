@@ -6,7 +6,8 @@ import { StreakCounter } from '../gamify/StreakCounter';
 import type { Page } from '../../App';
 
 export const DashboardHeader: React.FC<{ user: any, setPage: (page: Page) => void }> = ({ user, setPage }) => {
-    const { data: balanceKobo } = useSWR('wallet-balance', getWalletBalance);
+    const userId = user?.id || 'mock-user-id';
+    const { data: balanceKobo } = useSWR(['wallet-balance', userId], () => getWalletBalance(userId));
     const [hideBalance, setHideBalance] = useState(false);
 
     const balance = (balanceKobo || 0) / 100;
@@ -27,7 +28,7 @@ export const DashboardHeader: React.FC<{ user: any, setPage: (page: Page) => voi
                         <h1 className="text-xl font-bold text-gray-900 leading-none">{name}</h1>
                     </div>
                 </div>
-                <StreakCounter />
+                <StreakCounter userId={userId} />
             </div>
 
             <div className="relative z-10 p-4 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/20">

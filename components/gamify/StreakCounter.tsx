@@ -2,15 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { useToasts } from '../ToastHost';
 
-export const StreakCounter: React.FC = () => {
+export const StreakCounter: React.FC<{ userId: string }> = ({ userId }) => {
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const { add: addToast } = useToasts();
 
   useEffect(() => {
     const checkStreak = () => {
-      const storedStreak = parseInt(localStorage.getItem('daily_streak') || '0', 10);
-      const lastLoginDate = localStorage.getItem('last_login_date');
+      const storedStreak = parseInt(localStorage.getItem(`daily_streak_${userId}`) || '0', 10);
+      const lastLoginDate = localStorage.getItem(`last_login_date_${userId}`);
       const today = new Date().toDateString();
 
       if (lastLoginDate === today) {
@@ -20,8 +20,8 @@ export const StreakCounter: React.FC = () => {
         // Logged in yesterday, increment streak
         const newStreak = storedStreak + 1;
         setStreak(newStreak);
-        localStorage.setItem('daily_streak', newStreak.toString());
-        localStorage.setItem('last_login_date', today);
+        localStorage.setItem(`daily_streak_${userId}`, newStreak.toString());
+        localStorage.setItem(`last_login_date_${userId}`, today);
         
         // Celebration for keeping the streak
         setTimeout(() => {
@@ -37,14 +37,14 @@ export const StreakCounter: React.FC = () => {
         // For positivity, we'll just start at 1.
         const newStreak = 1;
         setStreak(newStreak);
-        localStorage.setItem('daily_streak', newStreak.toString());
-        localStorage.setItem('last_login_date', today);
+        localStorage.setItem(`daily_streak_${userId}`, newStreak.toString());
+        localStorage.setItem(`last_login_date_${userId}`, today);
       }
       setLoading(false);
     };
 
     checkStreak();
-  }, [addToast]);
+  }, [addToast, userId]);
 
   if (loading) return null;
 

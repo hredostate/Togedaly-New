@@ -12,7 +12,7 @@ const MOODS: { id: Mood; emoji: string; label: string; response: string }[] = [
     { id: 'odogwu', emoji: '🤑', label: 'Odogwu', response: "Opoooor! Cut soap for us na? 🧼 Time to top up that Ajo slot!" },
 ];
 
-export const MoodTracker: React.FC = () => {
+export const MoodTracker: React.FC<{ userId: string }> = ({ userId }) => {
     const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
     const [history, setHistory] = useState<Mood[]>([]);
     const { add: addToast } = useToasts();
@@ -20,34 +20,34 @@ export const MoodTracker: React.FC = () => {
     useEffect(() => {
         // Check if already logged today
         const today = new Date().toDateString();
-        const lastLog = localStorage.getItem('mood_last_log_date');
-        const storedMood = localStorage.getItem('mood_today');
+        const lastLog = localStorage.getItem(`mood_last_log_date_${userId}`);
+        const storedMood = localStorage.getItem(`mood_today_${userId}`);
         
         if (lastLog === today && storedMood) {
             setSelectedMood(storedMood as Mood);
         }
 
         // Load mock history for visualization
-        const savedHistory = JSON.parse(localStorage.getItem('mood_history') || '[]');
+        const savedHistory = JSON.parse(localStorage.getItem(`mood_history_${userId}`) || '[]');
         if (savedHistory.length === 0) {
             // Seed fake history if empty for better UX demo
             setHistory(['managing', 'okay', 'sapa', 'okay', 'soft']);
         } else {
             setHistory(savedHistory);
         }
-    }, []);
+    }, [userId]);
 
     const handleSelect = (mood: typeof MOODS[0]) => {
         if (selectedMood) return; // Already logged
 
         setSelectedMood(mood.id);
-        localStorage.setItem('mood_today', mood.id);
-        localStorage.setItem('mood_last_log_date', new Date().toDateString());
+        localStorage.setItem(`mood_today_${userId}`, mood.id);
+        localStorage.setItem(`mood_last_log_date_${userId}`, new Date().toDateString());
         
         // Update history
         const newHistory = [...history, mood.id].slice(-6); // Keep last 7
         setHistory(newHistory);
-        localStorage.setItem('mood_history', JSON.stringify(newHistory));
+        localStorage.setItem(`mood_history_${userId}`, JSON.stringify(newHistory));
 
         // Trigger reaction
         addToast({
