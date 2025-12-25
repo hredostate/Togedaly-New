@@ -78,27 +78,62 @@ const Auth: React.FC = () => {
 
       try {
           if (showOtpInput) {
-              // Verify OTP
-              const { error } = await supabase.auth.verifyOtp({
-                  phone: phone,
-                  token: otp,
-                  type: 'sms'
+              // Verify OTP via our API
+              const response = await fetch('/api/auth/verify-otp', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      phone,
+                      code: otp,
+                      fullName: isSignUp ? fullName : undefined,
+                      isSignUp
+                  })
               });
-              if (error) throw error;
-              // Success - Session listener handles redirect
-          } else {
-              // Send OTP
-              const { error } = await supabase.auth.signInWithOtp({
-                  phone: phone,
-                  options: {
-                      data: {
-                          full_name: isSignUp ? fullName : undefined
+
+              const result = await response.json();
+
+              if (!response.ok) {
+                  throw new Error(result.error || 'Verification failed');
+              }
+
+              // Success - create session with Supabase
+              if (result.isNewUser) {
+                  // For new users, sign up with phone
+                  const { error } = await supabase.auth.signInWithOtp({
+                      phone: result.phone,
+                      options: {
+                          data: {
+                              full_name: fullName
+                          }
                       }
-                  }
+                  });
+                  if (error) throw error;
+              } else {
+                  // For existing users, sign in with phone
+                  const { error } = await supabase.auth.signInWithOtp({
+                      phone: result.phone
+                  });
+                  if (error) throw error;
+              }
+              
+              add({ title: 'Success!', desc: 'Phone verified successfully.', emoji: '✅' });
+              // Session listener will handle redirect
+          } else {
+              // Send OTP via our API
+              const response = await fetch('/api/auth/send-otp', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phone })
               });
-              if (error) throw error;
+
+              const result = await response.json();
+
+              if (!response.ok) {
+                  throw new Error(result.error || 'Failed to send code');
+              }
+
               setShowOtpInput(true);
-              add({ title: 'Code Sent', desc: 'Check your phone for the OTP.', emoji: '📱' });
+              add({ title: 'Code Sent', desc: 'Check your phone for the verification code.', emoji: '📱' });
           }
       } catch (error: any) {
           add({ title: 'Error', desc: error.message, emoji: '⚠️' });

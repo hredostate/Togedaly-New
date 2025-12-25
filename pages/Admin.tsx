@@ -21,9 +21,10 @@ import Approvals from '../components/admin/Approvals';
 import UserManagement from '../components/admin/UserManagement';
 import DataBI from './DataBI';
 import Logistics from './Logistics';
+import AdminSmsConfig from './AdminSmsConfig';
 import { getUsers, getKycQueue, getAdminActionRequests, getRiskEvents } from '../services/adminService';
 
-type AdminTab = 'overview' | 'users' | 'kyc' | 'ventures' | 'risk' | 'audit' | 'env' | 'routing' | 'credits' | 'disputes' | 'nudges' | 'fraud' | 'notifications' | 'backups' | 'checklists' | 'support' | 'billing' | 'referrals' | 'approvals' | 'dataBI' | 'logistics';
+type AdminTab = 'overview' | 'users' | 'kyc' | 'ventures' | 'risk' | 'audit' | 'env' | 'routing' | 'credits' | 'disputes' | 'nudges' | 'fraud' | 'notifications' | 'backups' | 'checklists' | 'support' | 'billing' | 'referrals' | 'approvals' | 'dataBI' | 'logistics' | 'smsConfig';
 
 // --- Configuration ---
 
@@ -77,6 +78,7 @@ const MENU_GROUPS = [
       { id: 'backups', label: 'Backups', icon: '💾' },
       { id: 'checklists', label: 'Ops Checklists', icon: '📋' },
       { id: 'env', label: 'Environment', icon: '🔧' },
+      { id: 'smsConfig', label: 'SMS Config', icon: '📱' },
     ]
   }
 ];
@@ -207,6 +209,7 @@ const Admin: React.FC<{ setPage: (page: Page, context?: any) => void }> = ({ set
         case 'checklists': return <Checklists />;
         case 'dataBI': return <DataBI setPage={setPage} />;
         case 'logistics': return <Logistics setPage={setPage} />;
+        case 'smsConfig': return <AdminSmsConfig />;
         default: return <div className="p-8 text-center text-gray-500">Select an item from the menu</div>;
     }
   };
