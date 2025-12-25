@@ -4,11 +4,12 @@ import { PaystackAuthorization, PaystackSplit } from '../types';
 // Removed fallback mock key to prevent production security issues
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const BASE_URL = 'https://api.paystack.co';
+const MOCK_MODE = !PAYSTACK_SECRET_KEY;
 
 // Validate that the key is set at module load time
 // In production, consider using a proper logging framework
 if (!PAYSTACK_SECRET_KEY && typeof process !== 'undefined') {
-    throw new Error('FATAL: PAYSTACK_SECRET_KEY environment variable must be set');
+    console.warn('WARNING: PAYSTACK_SECRET_KEY environment variable is not set. Running in MOCK mode.');
 }
 
 export async function initializeTransaction(
@@ -18,10 +19,6 @@ export async function initializeTransaction(
     metadata?: any,
     splitCode?: string
 ): Promise<{ authorization_url: string; access_code: string; reference: string }> {
-    if (!PAYSTACK_SECRET_KEY) {
-        throw new Error('PAYSTACK_SECRET_KEY is not configured. Cannot initialize transaction.');
-    }
-    
     if (MOCK_MODE) {
         console.warn('[PAYSTACK] Running in MOCK mode - no API key provided');
         await new Promise(res => setTimeout(res, 500));
@@ -67,10 +64,6 @@ export async function initializeTransaction(
  * WARNING: In production, this should be called from a backend API route
  */
 export async function verifyTransaction(reference: string): Promise<{ status: string; amount: number; authorization: PaystackAuthorization }> {
-    if (!PAYSTACK_SECRET_KEY) {
-        throw new Error('PAYSTACK_SECRET_KEY is not configured. Cannot verify transaction.');
-    }
-    
     if (MOCK_MODE) {
         console.warn('[PAYSTACK] Running in MOCK mode - returning mock verification');
         await new Promise(res => setTimeout(res, 400));
@@ -121,10 +114,6 @@ export async function createSplit(
     name: string,
     subaccounts: { subaccount: string; share: number }[]
 ): Promise<{ id: number; name: string; split_code: string }> {
-    if (!PAYSTACK_SECRET_KEY) {
-        throw new Error('PAYSTACK_SECRET_KEY is not configured. Cannot create split.');
-    }
-    
     if (MOCK_MODE) {
         console.warn('[PAYSTACK] Running in MOCK mode - returning mock split');
         await new Promise(res => setTimeout(res, 600));
@@ -173,10 +162,6 @@ export async function chargeAuthorization(
     email: string,
     authorization_code: string
 ): Promise<{ status: string; reference: string }> {
-    if (!PAYSTACK_SECRET_KEY) {
-        throw new Error('PAYSTACK_SECRET_KEY is not configured. Cannot charge authorization.');
-    }
-    
     if (MOCK_MODE) {
         console.warn('[PAYSTACK] Running in MOCK mode - returning mock charge');
         await new Promise(res => setTimeout(res, 800));
