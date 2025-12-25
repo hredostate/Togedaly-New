@@ -28,13 +28,14 @@ ALTER TABLE sms_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE otp_codes ENABLE ROW LEVEL SECURITY;
 
 -- Only admins can read/write sms_config
+-- Using regex for exact domain matching to prevent spoofing
 CREATE POLICY "Admin read sms_config" ON sms_config
   FOR SELECT
-  USING (auth.jwt()->>'email' LIKE '%@togedaly.com');
+  USING (auth.jwt()->>'email' ~ '@togedaly\.com$');
 
 CREATE POLICY "Admin write sms_config" ON sms_config
   FOR ALL
-  USING (auth.jwt()->>'email' LIKE '%@togedaly.com');
+  USING (auth.jwt()->>'email' ~ '@togedaly\.com$');
 
 -- Service role can manage OTP codes (API routes use service role)
 -- Users cannot directly access OTP codes
