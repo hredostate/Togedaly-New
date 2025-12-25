@@ -4,13 +4,21 @@ import type { AdviserTip, LegacyPool as Pool, RevenueEvent, SupportTicketMessage
 import { searchKnowledgeBase } from './ragService';
 import { getUserProfileContext } from './profileService';
 
-const API_KEY = process.env.API_KEY;
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 if (!API_KEY) {
   console.warn("API_KEY is not set. AI features will not work.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+let _ai: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI | null {
+  if (!API_KEY) return null;
+  if (!_ai) {
+    _ai = new GoogleGenAI({ apiKey: API_KEY });
+  }
+  return _ai;
+}
 
 // Helper to sanitize JSON output from the model
 function cleanJson(text: string): string {
@@ -50,7 +58,8 @@ const toastPrompts = {
 };
 
 export async function getNaijaToast(action: keyof typeof toastPrompts, context?: string): Promise<{title: string, desc: string, emoji: string}> {
-  if (!API_KEY) {
+  const ai = getAI();
+  if (!ai) {
     return { title: 'Action complete!', desc: 'Your request was processed.', emoji: '👍' };
   }
 
@@ -89,7 +98,8 @@ export async function getNaijaToast(action: keyof typeof toastPrompts, context?:
 }
 
 export async function getAdviserFeed(): Promise<AdviserTip[]> {
-    if (!API_KEY) {
+    const ai = getAI();
+    if (!ai) {
         return [
             { title: 'API Key Missing', description: 'Please set up your Gemini API key to receive financial advice.', category: 'Setup' },
         ];
@@ -153,7 +163,8 @@ export async function getAdviserFeed(): Promise<AdviserTip[]> {
 }
 
 export async function getPoolInsight(pool: Pool, question: string): Promise<string> {
-    if (!API_KEY) {
+    const ai = getAI();
+    if (!ai) {
         return "AI features are currently unavailable. Please check the API key configuration.";
     }
     if (!question.trim()) {
@@ -190,7 +201,8 @@ export async function getPoolInsight(pool: Pool, question: string): Promise<stri
 
 
 export async function getRevenueDigest(events: RevenueEvent[]): Promise<string> {
-    if (!API_KEY) {
+    const ai = getAI();
+    if (!ai) {
         return "Your weekly payout summary is ready. Check your pools for details.";
     }
     if (events.length === 0) {
@@ -216,7 +228,8 @@ export async function getRevenueDigest(events: RevenueEvent[]): Promise<string> 
 }
 
 export async function getTicketSummary(messages: Pick<SupportTicketMessage, 'body' | 'is_admin'>[]): Promise<string> {
-    if (!API_KEY) {
+    const ai = getAI();
+    if (!ai) {
         return "AI features are currently unavailable. Please check the API key configuration.";
     }
     if (messages.length === 0) {
@@ -245,7 +258,8 @@ export async function getTicketSummary(messages: Pick<SupportTicketMessage, 'bod
 }
 
 export async function chatWithAI(userId: string, query: string): Promise<string> {
-    if (!API_KEY) return "Service is offline (Missing API Key).";
+    const ai = getAI();
+    if (!ai) return "Service is offline (Missing API Key).";
 
     try {
         const contextChunks = await searchKnowledgeBase(query, userId);
@@ -289,7 +303,8 @@ export async function chatWithAI(userId: string, query: string): Promise<string>
 }
 
 export async function getSuggestedMilestones(name: string, description: string, amount: number): Promise<{title: string, amount: number}[]> {
-    if (!API_KEY) return [];
+    const ai = getAI();
+    if (!ai) return [];
     
     try {
         const response = await ai.models.generateContent({
@@ -330,7 +345,8 @@ export async function getSuggestedMilestones(name: string, description: string, 
 
 // 1. Magic Paste / Form Filling
 export async function parsePoolDetails(text: string): Promise<any> {
-    if (!API_KEY) return {};
+    const ai = getAI();
+    if (!ai) return {};
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -359,7 +375,8 @@ export async function parsePoolDetails(text: string): Promise<any> {
 
 // 2. Semantic Navigation / Intent Recognition
 export async function interpretCommand(query: string): Promise<{ action: string, page?: string, context?: any }> {
-    if (!API_KEY) return { action: 'unknown' };
+    const ai = getAI();
+    if (!ai) return { action: 'unknown' };
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -395,7 +412,8 @@ export async function interpretCommand(query: string): Promise<{ action: string,
 
 // 3. Voice Intent Parsing (for Owambe)
 export async function parseVoiceSpray(transcript: string): Promise<{ amount: number, confirm: boolean }> {
-    if (!API_KEY) return { amount: 0, confirm: false };
+    const ai = getAI();
+    if (!ai) return { amount: 0, confirm: false };
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',

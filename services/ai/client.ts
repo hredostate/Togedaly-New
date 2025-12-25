@@ -11,7 +11,9 @@ export class AIClient {
   constructor(model: ModelChoice = 'gemini') { this.model = model; }
   async generate({ system, prompt, json }: GenerateArgs): Promise<string> {
     if (this.model === 'gemini') {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+      const apiKey = import.meta.env.VITE_API_KEY;
+      if (!apiKey) throw new Error('VITE_API_KEY is not set');
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: prompt,
@@ -22,7 +24,9 @@ export class AIClient {
       });
       return response.text || '';
     } else {
-      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) throw new Error('VITE_OPENAI_API_KEY is not set');
+      const client = new OpenAI({ apiKey });
       const r = await client.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [ { role: 'system', content: system }, { role: 'user', content: prompt } ],
