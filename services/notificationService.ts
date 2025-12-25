@@ -1,13 +1,10 @@
 
 // services/notificationService.ts
 import type { MessageTemplate, InboxMessage, NotificationChannel, NotificationStyle, Notification, NotificationDelivery, UserNotificationPrefs, PlatformSetting, UserSettings } from '../types';
-import { mockUserProfiles } from '../data/ajoMockData';
 import { supabase } from '../supabaseClient';
 
-// --- MOCK FALLBACK DATA ---
-let mockNotifications: Notification[] = [
-    { id: 'msg-1', recipient: 'user-001', title: 'Welcome to Togedaly!', body: 'We are glad to have you on board. Start by exploring ventures.', read_at: null, created_at: new Date(Date.now() - 86400000).toISOString(), kind: 'toast', meta: {}, delivery_status: 'sent', delivery_channels: ['toast'], tries: 1 },
-];
+// --- FALLBACK DATA ---
+let mockNotifications: Notification[] = [];
 
 let mockPreferences: Record<string, UserNotificationPrefs> = {};
 

@@ -1,18 +1,17 @@
 import type { Dispute, DisputeStatus, DefaultEvent } from '../types';
-import { mockDisputes, mockDefaultEvents } from '../data/standingMockData';
 
-let disputesDb = [...mockDisputes];
-let defaultsDb = [...mockDefaultEvents];
+let disputesDb: Dispute[] = [];
+let defaultsDb: DefaultEvent[] = [];
 
 // --- USER-FACING ---
 export async function getUserDisputes(): Promise<Dispute[]> {
-    console.log("MOCK: getUserDisputes");
+    console.log("getUserDisputes");
     await new Promise(res => setTimeout(res, 400));
     return disputesDb.filter(d => d.user_id === 'mock-user-id');
 }
 
 export async function createUserDispute(payload: Omit<Dispute, 'id'|'user_id'|'org_id'|'status'|'created_at'|'updated_at'>): Promise<Dispute> {
-    console.log("MOCK: createUserDispute", payload);
+    console.log("createUserDispute", payload);
     await new Promise(res => setTimeout(res, 600));
     const newDispute: Dispute = {
         id: `disp-${Date.now()}`,
@@ -28,7 +27,7 @@ export async function createUserDispute(payload: Omit<Dispute, 'id'|'user_id'|'o
 }
 
 export async function getUserDefaultEvents(): Promise<DefaultEvent[]> {
-    console.log("MOCK: getUserDefaultEvents");
+    console.log("getUserDefaultEvents");
     await new Promise(res => setTimeout(res, 300));
     return defaultsDb.filter(d => d.user_id === 'mock-user-id');
 }
@@ -36,7 +35,7 @@ export async function getUserDefaultEvents(): Promise<DefaultEvent[]> {
 
 // --- ADMIN-FACING ---
 export async function getAdminDisputes(filters: { status: DisputeStatus | 'all' }): Promise<Dispute[]> {
-    console.log("MOCK: getAdminDisputes", filters);
+    console.log("getAdminDisputes", filters);
     await new Promise(res => setTimeout(res, 500));
     if (filters.status === 'all') {
         return [...disputesDb].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -45,7 +44,7 @@ export async function getAdminDisputes(filters: { status: DisputeStatus | 'all' 
 }
 
 export async function updateAdminDispute(disputeId: string, updates: { status?: DisputeStatus, admin_note?: string }): Promise<Dispute> {
-    console.log("MOCK: updateAdminDispute", disputeId, updates);
+    console.log("updateAdminDispute", disputeId, updates);
     await new Promise(res => setTimeout(res, 700));
     const dispute = disputesDb.find(d => d.id === disputeId);
     if (!dispute) throw new Error("Dispute not found");

@@ -1,7 +1,9 @@
 
 import type { PoolTP, PoolMembership, PoolCycle, MemberCycleObligation, CollateralAccount, PoolType, PoolDetailsData, LegacyPool } from '../types';
 import { db } from '../lib/db';
-import { mockCyclesTP } from '../data/trustPoolMockData'; // Keeping cycles mock for logic simplicity
+
+// In-memory cycles for logic simplicity (to be replaced with real DB)
+let cyclesTP: PoolCycle[] = [];
 
 export async function getPools(): Promise<PoolTP[]> {
   await new Promise(r => setTimeout(r, 300));
@@ -27,11 +29,10 @@ export async function getPoolWithDetails(poolId: string, userId?: string | null)
     const membership = db.getMemberships(userId).find(m => m.pool_id === poolId) || null;
     const collateral = db.getCollateral(poolId, userId);
     
-    // For cycles, we simulate them based on pool creation if not in DB, 
-    // but here we fall back to the mock Cycles list for the demo logic to work smoothly with the specific IDs
+    // For cycles, we simulate them based on pool creation
     const obligations = db.getObligations(poolId, userId).map(o => ({
         ...o,
-        cycle: mockCyclesTP.find(c => c.id === o.cycle_id) || { id: o.cycle_id, pool_id: poolId, cycle_number: 1, due_date: new Date().toISOString() }
+        cycle: cyclesTP.find(c => c.id === o.cycle_id) || { id: o.cycle_id, pool_id: poolId, cycle_number: 1, due_date: new Date().toISOString() }
     })).sort((a, b) => a.cycle.cycle_number - b.cycle.cycle_number);
 
     return {

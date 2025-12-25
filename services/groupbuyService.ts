@@ -1,12 +1,10 @@
 import type { GroupBuy } from '../types';
-import { mockGroupBuys } from '../data/groupbuyMockData';
 
-let groupBuysDb = [...mockGroupBuys];
+let groupBuysDb: GroupBuy[] = [];
 
 export async function getGroupBuys(): Promise<GroupBuy[]> {
     await new Promise(res => setTimeout(res, 400));
     // In a real app, you might join with groupbuy_orders to get total_reserved_units.
-    // It's pre-calculated in the mock data for simplicity.
     return JSON.parse(JSON.stringify(groupBuysDb));
 }
 

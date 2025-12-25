@@ -1,6 +1,5 @@
 // services/opsService.ts
 import type { Incident, UptimeCheck, DlqItem, IncidentSeverity, IncidentStatus, ArrearsRecord } from '../types';
-import { mockIncidents, mockUptimeChecks, mockDlqItems, mockArrearsRecords } from '../data/opsMockData';
 
 // TODO: Connect to real Supabase data
 // This service uses in-memory arrays that reset on refresh. Should use Supabase tables instead:
@@ -19,8 +18,9 @@ import { mockIncidents, mockUptimeChecks, mockDlqItems, mockArrearsRecords } fro
 // - SELECT * FROM dlq_items ORDER BY created_at DESC
 // - DELETE FROM dlq_items WHERE id = $1
 
-let incidentsDb = [...mockIncidents];
-let dlqDb = [...mockDlqItems];
+let incidentsDb: Incident[] = [];
+let dlqDb: DlqItem[] = [];
+let uptimeChecks: UptimeCheck[] = [];
 
 export async function getPublicIncidents(): Promise<Incident[]> {
     await new Promise(res => setTimeout(res, 300));
@@ -31,7 +31,7 @@ export async function getPublicIncidents(): Promise<Incident[]> {
 export async function getUptimeChecks(): Promise<UptimeCheck[]> {
     await new Promise(res => setTimeout(res, 200));
     // TODO: Replace with: return supabase.from('uptime_checks').select('*').order('last_check', { ascending: false })
-    return mockUptimeChecks;
+    return uptimeChecks;
 }
 
 export async function openIncident(title: string, body: string, severity: IncidentSeverity): Promise<Incident> {

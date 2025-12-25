@@ -1,19 +1,17 @@
 
 import type { RiskEvent, UserRiskProfile } from '../types';
-import { mockUserRiskProfiles, mockKycProfiles } from '../data/riskMockData';
 import { logAdminAction } from './auditService';
 
-// Mock in-memory store for risk events
-let mockRiskEvents: RiskEvent[] = [];
+// In-memory store for risk events and profiles
+let riskEvents: RiskEvent[] = [];
+let userRiskProfiles: UserRiskProfile[] = [];
 
 /**
  * Logs a new risk event for a user. In a real app, this would be called from
  * a secure server-side environment.
- * ---
- * MOCK IMPLEMENTATION: Adds the event to an in-memory array.
  */
 export async function logRiskEvent(event: Omit<RiskEvent, 'id' | 'created_at'>): Promise<RiskEvent> {
-    console.log("MOCK: logRiskEvent", event);
+    console.log("logRiskEvent", event);
     await new Promise(resolve => setTimeout(resolve, 200));
 
     const newEvent: RiskEvent = {
@@ -21,11 +19,10 @@ export async function logRiskEvent(event: Omit<RiskEvent, 'id' | 'created_at'>):
         id: `risk-${Date.now()}`,
         created_at: new Date().toISOString(),
     };
-    mockRiskEvents.push(newEvent);
+    riskEvents.push(newEvent);
 
     // In a real app, a database trigger would recompute the user's risk score.
-    // We can simulate that here for the mock data.
-    const userProfile = mockUserRiskProfiles.find(p => p.user_id === event.user_id);
+    const userProfile = userRiskProfiles.find(p => p.user_id === event.user_id);
     if(userProfile) {
         userProfile.risk_30d += event.severity;
         userProfile.risk_all += event.severity;
@@ -38,13 +35,11 @@ export async function logRiskEvent(event: Omit<RiskEvent, 'id' | 'created_at'>):
 /**
  * Fetches a list of user risk profiles for the admin dashboard.
  * This combines KYC info with aggregated risk scores.
- * ---
- * MOCK IMPLEMENTATION: Returns a static list of mock profiles.
  */
 export async function getAdminUserRiskProfiles(): Promise<UserRiskProfile[]> {
-    console.log("MOCK: getAdminUserRiskProfiles");
+    console.log("getAdminUserRiskProfiles");
     await new Promise(resolve => setTimeout(resolve, 500));
-    return mockUserRiskProfiles;
+    return userRiskProfiles;
 }
 
 /**

@@ -1,6 +1,4 @@
 
-import { mockTrustHistory, mockTrustFactors } from '../data/trustScoreMockData';
-
 // TODO: Connect to real Supabase data
 // This service should query actual trust score data from the database.
 // Required tables:
@@ -16,7 +14,7 @@ import { mockTrustHistory, mockTrustFactors } from '../data/trustScoreMockData';
 export async function getTrustScoreHistory(userId: string) {
     await new Promise(res => setTimeout(res, 400));
     // TODO: Replace with: return supabase.from('trust_score_history').select('*').eq('user_id', userId).order('timestamp', { ascending: false })
-    return mockTrustHistory;
+    return [];
 }
 
 export async function getTrustScoreBreakdown(userId: string) {
@@ -24,7 +22,7 @@ export async function getTrustScoreBreakdown(userId: string) {
     // TODO: Replace with actual queries to trust_score_factors table
     // Should return { score: number, factors: Array<{ label: string, value: string, positive: boolean }> }
     return {
-        score: 75,
-        factors: mockTrustFactors
+        score: 0,
+        factors: []
     };
 }

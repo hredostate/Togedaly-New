@@ -1,10 +1,8 @@
 
 import type { Supplier, GroupBuy, FulfillmentStatus } from '../types';
-import { mockSuppliers } from '../data/supplierMockData';
-import { mockGroupBuys } from '../data/groupbuyMockData';
 
-let suppliersDb = [...mockSuppliers];
-let groupBuysDb = [...mockGroupBuys];
+let suppliersDb: Supplier[] = [];
+let groupBuysDb: GroupBuy[] = [];
 
 export async function getSuppliers(): Promise<Supplier[]> {
     await new Promise(res => setTimeout(res, 400));
@@ -56,7 +54,7 @@ export async function registerSupplier(payload: {
     bank_code: string;
     account_number: string;
 }): Promise<Supplier> {
-    console.log("MOCK: registerSupplier", payload);
+    console.log("registerSupplier", payload);
     await new Promise(res => setTimeout(res, 1000));
 
     const newSupplier: Supplier = {
