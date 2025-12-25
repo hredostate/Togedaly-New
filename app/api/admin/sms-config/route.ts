@@ -3,16 +3,40 @@ import { supabase } from '../../../../supabaseClient';
 import { sendSMS } from '../../../../services/kudiSmsService';
 
 /**
+ * Verify admin access from JWT token
+ */
+async function verifyAdminAccess(req: NextRequest): Promise<boolean> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+  
+  const token = authHeader.substring(7);
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return false;
+    }
+    
+    // Check if user email ends with @togedaly.com
+    return user.email?.endsWith('@togedaly.com') ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * GET /api/admin/sms-config
  * Get SMS configuration (token masked)
  */
 export async function GET(req: NextRequest) {
   try {
-    // Check admin auth (in production, verify JWT)
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    const isAdmin = await verifyAdminAccess(req);
+    
+    if (!isAdmin) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Admin access required' },
         { status: 401 }
       );
     }
@@ -21,7 +45,7 @@ export async function GET(req: NextRequest) {
       .from('sms_config')
       .select('*')
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
     if (error && error.code !== 'PGRST116') {
       throw error;
@@ -65,11 +89,11 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    // Check admin auth (in production, verify JWT)
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    const isAdmin = await verifyAdminAccess(req);
+    
+    if (!isAdmin) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Admin access required' },
         { status: 401 }
       );
     }
@@ -107,7 +131,7 @@ export async function POST(req: NextRequest) {
       .from('sms_config')
       .select('id')
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
     if (existing) {
       // Update existing config

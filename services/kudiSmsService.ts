@@ -75,15 +75,19 @@ export function generateOTP(): string {
 
 /**
  * Get SMS configuration from database
+ * Note: This should be called from API routes with proper permissions
  */
 async function getSMSConfig(): Promise<SMSConfig | null> {
+  // This function should only be called from server-side API routes
+  // that have proper admin access. For now, we'll use the regular client
+  // but in production, API routes should use service role client.
   const { data, error } = await supabase
     .from('sms_config')
     .select('api_token, sender_id')
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
   
-  if (error || !data) {
+  if (error) {
     console.error('Failed to get SMS config:', error);
     return null;
   }
@@ -93,11 +97,13 @@ async function getSMSConfig(): Promise<SMSConfig | null> {
 
 /**
  * Store OTP in database
+ * Note: This should be called from API routes with service role permissions
  */
 async function storeOTP(phone: string, code: string): Promise<boolean> {
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
   
+  // This should be called from API routes that use service role client
   const { error } = await supabase
     .from('otp_codes')
     .insert({
@@ -195,6 +201,7 @@ export async function sendOTP(phone: string): Promise<{
 
 /**
  * Verify OTP code
+ * Note: This should be called from API routes with service role permissions
  */
 export async function verifyOTP(
   phone: string,
@@ -202,6 +209,7 @@ export async function verifyOTP(
 ): Promise<{ success: boolean; error?: string }> {
   const normalizedPhone = normalizePhoneNumber(phone);
   
+  // This should be called from API routes that use service role client
   // Get the most recent unverified OTP for this phone
   const { data, error } = await supabase
     .from('otp_codes')
@@ -210,7 +218,7 @@ export async function verifyOTP(
     .eq('verified', false)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
   
   if (error || !data) {
     return { success: false, error: 'No verification code found. Please request a new code.' };

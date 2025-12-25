@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToasts } from '../components/ToastHost';
+import { supabase } from '../supabaseClient';
 
 interface SMSConfig {
   configured: boolean;
@@ -16,6 +17,7 @@ const AdminSmsConfig: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [config, setConfig] = useState<SMSConfig | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const [apiToken, setApiToken] = useState('');
   const [senderId, setSenderId] = useState('');
@@ -23,15 +25,33 @@ const AdminSmsConfig: React.FC = () => {
   const [showToken, setShowToken] = useState(false);
 
   useEffect(() => {
+    checkAdminAccess();
     loadConfig();
   }, []);
+
+  const checkAdminAccess = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const admin = user?.email?.endsWith('@togedaly.com') ?? false;
+    setIsAdmin(admin);
+    
+    if (!admin) {
+      add({ title: 'Access Denied', desc: 'Admin access required', emoji: '🚫' });
+    }
+  };
+
+  const getAuthToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || '';
+  };
 
   const loadConfig = async () => {
     try {
       setLoading(true);
+      const token = await getAuthToken();
+      
       const response = await fetch('/api/admin/sms-config', {
         headers: {
-          'Authorization': 'Bearer dummy-token' // In production, use real JWT
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -51,6 +71,11 @@ const AdminSmsConfig: React.FC = () => {
   };
 
   const handleSave = async (testMode = false) => {
+    if (!isAdmin) {
+      add({ title: 'Access Denied', desc: 'Admin access required', emoji: '🚫' });
+      return;
+    }
+
     if (!apiToken || !senderId) {
       add({ title: 'Validation Error', desc: 'Please fill in all required fields', emoji: '⚠️' });
       return;
@@ -63,11 +88,13 @@ const AdminSmsConfig: React.FC = () => {
         setLoading(true);
       }
       
+      const token = await getAuthToken();
+      
       const response = await fetch('/api/admin/sms-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dummy-token' // In production, use real JWT
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           api_token: apiToken,
@@ -107,6 +134,18 @@ const AdminSmsConfig: React.FC = () => {
       setTestLoading(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <div className="text-4xl mb-4">🚫</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600">This page is only accessible to administrators.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">

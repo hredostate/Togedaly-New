@@ -4,7 +4,7 @@ import { supabase } from '../../../../supabaseClient';
 
 /**
  * POST /api/auth/verify-otp
- * Verify OTP and sign in/sign up user
+ * Verify OTP and check user status
  */
 export async function POST(req: NextRequest) {
   try {
@@ -29,12 +29,12 @@ export async function POST(req: NextRequest) {
     
     const normalizedPhone = normalizePhoneNumber(phone);
     
-    // Check if user exists
+    // Check if user exists with this phone
     const { data: existingUser } = await supabase
       .from('profiles')
       .select('id, user_id')
       .eq('phone', normalizedPhone)
-      .single();
+      .maybeSingle();
     
     if (isSignUp && existingUser) {
       return NextResponse.json(
@@ -50,27 +50,21 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // For sign up: Create user with phone auth
-    // For sign in: Just verify the user exists (actual auth handled by Supabase)
-    if (isSignUp) {
-      // Note: In production, you would create the user via Supabase Admin API
-      // For now, we return success and let the frontend handle the session
-      return NextResponse.json({
-        success: true,
-        message: 'Verification successful',
-        isNewUser: true,
-        phone: normalizedPhone,
-        fullName: fullName || ''
-      });
-    } else {
-      return NextResponse.json({
-        success: true,
-        message: 'Verification successful',
-        isNewUser: false,
-        phone: normalizedPhone,
-        userId: existingUser?.user_id
-      });
-    }
+    // Return success with user info
+    // Note: In a complete implementation, you would:
+    // 1. Use Supabase Admin API to create/fetch the user
+    // 2. Generate a session token
+    // 3. Return the session token to the client
+    // For now, we just verify the OTP and let the client know verification succeeded
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Verification successful',
+      isNewUser: isSignUp,
+      phone: normalizedPhone,
+      // In production, include session token here
+      note: 'Phone verification successful. In production, this would include a session token for automatic sign-in.'
+    });
     
   } catch (error: any) {
     console.error('Verify OTP error:', error);

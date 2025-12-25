@@ -96,28 +96,17 @@ const Auth: React.FC = () => {
                   throw new Error(result.error || 'Verification failed');
               }
 
-              // Success - create session with Supabase
-              if (result.isNewUser) {
-                  // For new users, sign up with phone
-                  const { error } = await supabase.auth.signInWithOtp({
-                      phone: result.phone,
-                      options: {
-                          data: {
-                              full_name: fullName
-                          }
-                      }
-                  });
-                  if (error) throw error;
-              } else {
-                  // For existing users, sign in with phone
-                  const { error } = await supabase.auth.signInWithOtp({
-                      phone: result.phone
-                  });
-                  if (error) throw error;
-              }
+              add({ title: 'Success!', desc: 'Phone verified successfully. You can now sign in with your phone number.', emoji: '✅' });
               
-              add({ title: 'Success!', desc: 'Phone verified successfully.', emoji: '✅' });
-              // Session listener will handle redirect
+              // Note: In a production app with proper backend, the API would create
+              // a session token here. For now, users should use the regular Supabase 
+              // phone auth or we'd need to implement custom session management.
+              // This implementation focuses on the OTP verification via KudiSMS.
+              
+              // Reset form for re-login
+              setShowOtpInput(false);
+              setOtp('');
+              
           } else {
               // Send OTP via our API
               const response = await fetch('/api/auth/send-otp', {
