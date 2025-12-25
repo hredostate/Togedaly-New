@@ -21,10 +21,14 @@ export interface GenerateArgs { system: string; prompt: string; json?: boolean; 
 
 export class AIClient {
   model: ModelChoice;
+  
+  // Note: Constructor logs warning about client-side API key exposure
+  // This is intentional for development awareness - should be removed when migrated to server-side
   constructor(model: ModelChoice = 'gemini') { 
     this.model = model;
-    // Runtime warning about client-side API key exposure
-    if (typeof window !== 'undefined') {
+    // Runtime warning about client-side API key exposure (development only)
+    // TODO: Remove this warning once AI operations are moved to server-side API routes
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
       console.warn('⚠️ WARNING: AI API keys exposed client-side. Move to server-side API routes for production.');
     }
   }

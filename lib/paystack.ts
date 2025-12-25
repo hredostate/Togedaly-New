@@ -6,8 +6,10 @@ import { PaystackAuthorization, PaystackSplit } from '../types';
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const BASE_URL = 'https://api.paystack.co';
 
-if (!PAYSTACK_SECRET_KEY) {
-    console.error('SECURITY ERROR: PAYSTACK_SECRET_KEY environment variable is not set');
+// Validate that the key is set at module load time
+// In production, consider using a proper logging framework
+if (!PAYSTACK_SECRET_KEY && typeof process !== 'undefined') {
+    throw new Error('FATAL: PAYSTACK_SECRET_KEY environment variable must be set');
 }
 
 export async function initializeTransaction(

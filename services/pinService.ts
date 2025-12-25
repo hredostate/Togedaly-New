@@ -15,9 +15,6 @@
  * that performs proper cryptographic comparison of hashed PINs.
  */
 export async function verifyTransactionPin(pin: string): Promise<boolean> {
-    // Simulate network latency
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
     // SECURITY: Returning false to prevent bypass until proper implementation
     // TODO: Replace with actual backend API call
     return false;
