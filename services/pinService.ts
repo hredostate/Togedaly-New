@@ -15,7 +15,7 @@
  * that performs proper cryptographic comparison of hashed PINs.
  */
 export async function verifyTransactionPin(pin: string): Promise<boolean> {
-    // SECURITY: Returning false to prevent bypass until proper implementation
+    // SECURITY: Throwing error to prevent accidental production use
     // TODO: Replace with actual backend API call
-    return false;
+    throw new Error('PIN verification not implemented. This is a security placeholder. Implement proper backend verification before production use.');
 }
