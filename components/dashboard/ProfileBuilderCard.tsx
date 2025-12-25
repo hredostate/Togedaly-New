@@ -5,7 +5,7 @@ import type { ProfileQuestion } from '../../types';
 import { useToasts } from '../ToastHost';
 import { awardXp } from '../../services/gamificationService';
 
-export const ProfileBuilderCard: React.FC = () => {
+export const ProfileBuilderCard: React.FC<{ userId: string }> = ({ userId }) => {
     const [question, setQuestion] = useState<ProfileQuestion | null>(null);
     const [loading, setLoading] = useState(true);
     const [dismissed, setDismissed] = useState(false);
@@ -31,7 +31,7 @@ export const ProfileBuilderCard: React.FC = () => {
             await saveAnswer(question.id, answer);
             
             // Gamification reward
-            await awardXp(question.gamification.xp, "Profile Building");
+            await awardXp(userId, question.gamification.xp, "Profile Building");
             addToast({ 
                 title: question.gamification.successMsg, 
                 desc: `+${question.gamification.xp} XP Earned!`, 

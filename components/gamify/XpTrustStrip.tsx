@@ -4,7 +4,7 @@ import { getUserProgress } from '../../services/gamificationService';
 import type { UserProgress } from '../../types';
 import { LevelUpModal } from './LevelUpModal';
 
-const XpTrustStrip: React.FC = () => {
+const XpTrustStrip: React.FC<{ userId: string }> = ({ userId }) => {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -13,7 +13,7 @@ const XpTrustStrip: React.FC = () => {
   useEffect(() => {
     const fetchProgress = async () => {
       setLoading(true);
-      const data = await getUserProgress();
+      const data = await getUserProgress(userId);
       setProgress(data);
       setLoading(false);
 
@@ -26,7 +26,7 @@ const XpTrustStrip: React.FC = () => {
       }
     };
     fetchProgress();
-  }, []);
+  }, [userId]);
 
   if (loading) {
       return (

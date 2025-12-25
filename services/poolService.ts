@@ -186,11 +186,7 @@ export async function contributeToLegacyPool(poolId: string, amount_kobo: number
     }
 }
 
-export async function getWalletBalance(): Promise<number> {
-    // In real app, user ID comes from auth context. 
-    // Here we use a fixed key or get from localStorage if we tracked it
-    // For prototype, we use 'mock-user-id' or the one from `App.tsx` state
-    const userId = 'mock-user-id'; // Simplified for direct service call
+export async function getWalletBalance(userId: string): Promise<number> {
     return db.getBalance(userId);
 }
 

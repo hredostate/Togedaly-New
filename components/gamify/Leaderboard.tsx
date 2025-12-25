@@ -13,19 +13,19 @@ const LeaderboardSkeleton = () => (
 );
 
 
-const Leaderboard: React.FC = () => {
+const Leaderboard: React.FC<{ userId: string }> = ({ userId }) => {
   const [rows, setRows] = useState<{ display_name: string, xp: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
         setLoading(true);
-        const data = await getLeaderboard();
+        const data = await getLeaderboard(userId);
         setRows(data);
         setLoading(false);
     };
     fetchLeaderboard();
-  }, []);
+  }, [userId]);
 
   return (
     <div className="rounded-2xl border border-brand-100 bg-white p-4">

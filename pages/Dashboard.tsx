@@ -19,8 +19,8 @@ import { DreamBoard } from '../components/dashboard/DreamBoard';
 import { ProfileBuilderCard } from '../components/dashboard/ProfileBuilderCard';
 import { supabase } from '../supabaseClient';
 
-const MyPoolsList: React.FC<{ setPage: (page: Page, context?: any) => void }> = ({ setPage }) => {
-    const { data: pools, error, isLoading } = useSWR<(PoolTP | LegacyPool)[]>('my-pools', () => getMyPools('mock-user-id'));
+const MyPoolsList: React.FC<{ setPage: (page: Page, context?: any) => void; userId: string }> = ({ setPage, userId }) => {
+    const { data: pools, error, isLoading } = useSWR<(PoolTP | LegacyPool)[]>(['my-pools', userId], () => getMyPools(userId));
 
     const handlePoolClick = (pool: PoolTP | LegacyPool) => {
         const isTrustPool = 'collateral_ratio' in pool;
@@ -101,6 +101,8 @@ export default function Dashboard({ setPage }: { setPage: (page: Page, context?:
     }
   }, [startTour]);
 
+  const userId = user?.id || 'mock-user-id';
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-20">
       {/* 1. Unified Header */}
@@ -109,18 +111,18 @@ export default function Dashboard({ setPage }: { setPage: (page: Page, context?:
       </div>
 
       {/* 2. Mood Tracker (Engagement) */}
-      <MoodTracker />
+      <MoodTracker userId={userId} />
 
       {/* 3. Dream Board (New Goal Tracker) */}
-      <DreamBoard />
+      <DreamBoard userId={userId} />
 
       {/* 4. High Priority Action (The "Hook") */}
       <div id="dash-action">
-        <NextBestActionCard orgId={1} userId={user?.id || 'mock-user-id'} />
+        <NextBestActionCard orgId={1} userId={userId} />
       </div>
 
       {/* 5. Profile Builder (Context Gathering) */}
-      <ProfileBuilderCard />
+      <ProfileBuilderCard userId={userId} />
 
       {/* 6. Tabs for Content Organization */}
       <div>
@@ -153,14 +155,14 @@ export default function Dashboard({ setPage }: { setPage: (page: Page, context?:
                           <h3 className="font-bold text-gray-800">Active Investments</h3>
                           <button onClick={() => setPage('explore')} className="text-xs font-medium text-brand hover:underline">Find New +</button>
                       </div>
-                      <MyPoolsList setPage={setPage} />
+                      <MyPoolsList setPage={setPage} userId={userId} />
                   </section>
               </div>
           ) : (
               <div className="space-y-6 animate-fade-in">
-                  <XpTrustStrip />
-                  <Badges />
-                  <Leaderboard />
+                  <XpTrustStrip userId={userId} />
+                  <Badges userId={userId} />
+                  <Leaderboard userId={userId} />
               </div>
           )}
       </div>

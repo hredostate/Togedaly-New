@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { getWalletBalance } from '../../services/poolService';
 
-export const DreamBoard: React.FC = () => {
-    const { data: balanceKobo } = useSWR('wallet-balance', getWalletBalance);
+export const DreamBoard: React.FC<{ userId: string }> = ({ userId }) => {
+    const { data: balanceKobo } = useSWR(['wallet-balance', userId], () => getWalletBalance(userId));
     const [target, setTarget] = useState(500000); // Default 500k
     const [goalName, setGoalName] = useState('Japa Fund ✈️');
     const [isEditing, setIsEditing] = useState(false);
@@ -12,17 +12,17 @@ export const DreamBoard: React.FC = () => {
     const balance = (balanceKobo || 0) / 100;
     const percentage = Math.min(100, Math.max(0, (balance / target) * 100));
     
-    // Simple persistence
+    // Simple persistence per user
     useEffect(() => {
-        const savedTarget = localStorage.getItem('dream_target');
-        const savedName = localStorage.getItem('dream_name');
+        const savedTarget = localStorage.getItem(`dream_target_${userId}`);
+        const savedName = localStorage.getItem(`dream_name_${userId}`);
         if (savedTarget) setTarget(parseInt(savedTarget, 10));
         if (savedName) setGoalName(savedName);
-    }, []);
+    }, [userId]);
 
     const handleSave = () => {
-        localStorage.setItem('dream_target', target.toString());
-        localStorage.setItem('dream_name', goalName);
+        localStorage.setItem(`dream_target_${userId}`, target.toString());
+        localStorage.setItem(`dream_name_${userId}`, goalName);
         setIsEditing(false);
     };
 

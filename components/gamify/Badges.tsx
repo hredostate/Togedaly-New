@@ -14,19 +14,19 @@ const BadgeSkeleton = () => (
     <div className="h-10 w-full bg-slate-200 rounded-xl animate-pulse"></div>
 );
 
-const Badges: React.FC = () => {
+const Badges: React.FC<{ userId: string }> = ({ userId }) => {
   const [items, setItems] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBadges = async () => {
         setLoading(true);
-        const data = await getUserBadges();
+        const data = await getUserBadges(userId);
         setItems(data);
         setLoading(false);
     };
     fetchBadges();
-  }, []);
+  }, [userId]);
 
   return (
     <div className="rounded-2xl border border-brand-100 bg-white p-4">
