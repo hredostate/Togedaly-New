@@ -45,9 +45,6 @@ export function normalizePhoneNumber(phone: string): string {
     normalized = '234' + normalized.substring(1);
   } else if (normalized.startsWith('234')) {
     // Already in correct format
-  } else if (normalized.startsWith('+234')) {
-    // +234803XXXXXXX -> 234803XXXXXXX
-    normalized = normalized.substring(1);
   } else if (normalized.length === 10) {
     // 803XXXXXXX -> 234803XXXXXXX
     normalized = '234' + normalized;

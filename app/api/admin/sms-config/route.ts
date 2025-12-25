@@ -60,10 +60,10 @@ export async function GET(req: NextRequest) {
       });
     }
     
-    // Mask token for security
-    const maskedToken = data.api_token 
+    // Mask token for security (ensure token has minimum length)
+    const maskedToken = data.api_token && data.api_token.length >= 12
       ? data.api_token.substring(0, 8) + '...' + data.api_token.substring(data.api_token.length - 4)
-      : '';
+      : '***masked***';
     
     return NextResponse.json({
       configured: true,
