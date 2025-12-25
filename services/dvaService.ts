@@ -1,15 +1,14 @@
 
 import { supabase } from '../supabaseClient';
 import type { VirtualAccount, IncomingTransfer } from '../types';
-import { mockVirtualAccounts, mockIncomingTransfers } from '../data/dvaMockData';
 import { recordIdempotency } from './idempotencyService';
 import { decideRoute } from './routingService';
 import { DISABLE_WALLET_CREDIT } from '../config';
 import { logAdminAction } from './auditService';
 
-// Mock Fallback Store
-let localAccounts = [...mockVirtualAccounts];
-let localTransfers = [...mockIncomingTransfers];
+// Fallback Store
+let localAccounts: VirtualAccount[] = [];
+let localTransfers: IncomingTransfer[] = [];
 
 export async function getProviders(): Promise<{ name: string; slug: string }[]> {
     // In real app, fetch from Paystack API via Backend
@@ -30,8 +29,8 @@ export async function getVirtualAccounts(): Promise<VirtualAccount[]> {
         if (error) throw error;
         return data as VirtualAccount[];
     } catch (e) {
-        console.warn("DB Fetch DVA failed, using mock", e);
-        return localAccounts.filter(a => a.user_id === user.id || a.user_id === 'mock-user-id');
+        console.warn("DB Fetch DVA failed, using fallback", e);
+        return localAccounts.filter(a => a.user_id === user.id);
     }
 }
 

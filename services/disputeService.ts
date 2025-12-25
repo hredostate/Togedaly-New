@@ -1,8 +1,7 @@
 
-import { mockDisputes } from '../data/disputeMockData';
 import type { Dispute } from '../types';
 
-let disputesDb = [...mockDisputes];
+let disputesDb: Dispute[] = [];
 
 export async function getDisputes(): Promise<Dispute[]> {
     await new Promise(res => setTimeout(res, 400));

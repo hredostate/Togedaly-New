@@ -1,22 +1,21 @@
 // services/settlementService.ts
-import type { VGroupbuySupplierBalance, GroupbuySupplierSettlement, SupplierPayout } from '../types';
-import { mockSupplierSettlements } from '../data/settlementMockData';
-import { mockGroupBuys } from '../data/groupbuyMockData';
-import { mockSuppliers } from '../data/supplierMockData';
+import type { VGroupbuySupplierBalance, GroupbuySupplierSettlement, SupplierPayout, GroupBuy, Supplier } from '../types';
 
 
-let settlementsDb = [...mockSupplierSettlements];
+let settlementsDb: GroupbuySupplierSettlement[] = [];
 let payoutsDb: SupplierPayout[] = [];
+let groupBuys: GroupBuy[] = [];
+let suppliers: Supplier[] = [];
 
 // Simulates fetching from the v_groupbuy_supplier_balance view
 export async function getSettlementBalances(): Promise<VGroupbuySupplierBalance[]> {
     await new Promise(res => setTimeout(res, 500));
 
-    // Re-compute the view on the fly from the mock DBs
+    // Re-compute the view on the fly from the DBs
     return settlementsDb.map(s => {
-        const groupbuy = mockGroupBuys.find(gb => gb.id === s.groupbuy_id);
-        const supplier = mockSuppliers.find(sup => sup.id === s.supplier_id);
-        const total_adjustments = 0; // for mock
+        const groupbuy = groupBuys.find(gb => gb.id === s.groupbuy_id);
+        const supplier = suppliers.find(sup => sup.id === s.supplier_id);
+        const total_adjustments = 0;
         const remaining_due = s.net_payable + total_adjustments - s.paid_amount;
         
         let status = s.status;

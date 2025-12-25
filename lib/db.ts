@@ -1,7 +1,3 @@
-
-import { mockLegacyPools } from '../data/mockData';
-import { mockPoolsTP, mockMembershipsTP, mockCollateralAccountsTP, mockCyclesTP, mockObligationsTP } from '../data/trustPoolMockData';
-import { mockUserProfiles } from '../data/ajoMockData';
 import type { PoolTP, LegacyPool, UserProfile, PoolMembership, CollateralAccount, MemberCycleObligation } from '../types';
 
 const KEYS = {
@@ -24,29 +20,30 @@ class LocalDB {
   private init() {
     if (typeof window === 'undefined') return;
 
+    // Initialize empty data structures if not present
     if (!localStorage.getItem(KEYS.POOLS_TP)) {
-      localStorage.setItem(KEYS.POOLS_TP, JSON.stringify(mockPoolsTP));
+      localStorage.setItem(KEYS.POOLS_TP, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.POOLS_LEGACY)) {
-      localStorage.setItem(KEYS.POOLS_LEGACY, JSON.stringify(mockLegacyPools));
+      localStorage.setItem(KEYS.POOLS_LEGACY, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.MEMBERSHIPS)) {
-      localStorage.setItem(KEYS.MEMBERSHIPS, JSON.stringify(mockMembershipsTP));
+      localStorage.setItem(KEYS.MEMBERSHIPS, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.COLLATERAL)) {
-      localStorage.setItem(KEYS.COLLATERAL, JSON.stringify(mockCollateralAccountsTP));
+      localStorage.setItem(KEYS.COLLATERAL, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.OBLIGATIONS)) {
-      localStorage.setItem(KEYS.OBLIGATIONS, JSON.stringify(mockObligationsTP));
+      localStorage.setItem(KEYS.OBLIGATIONS, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.USERS)) {
-      localStorage.setItem(KEYS.USERS, JSON.stringify(mockUserProfiles));
+      localStorage.setItem(KEYS.USERS, JSON.stringify([]));
     }
     if (!localStorage.getItem(KEYS.WALLET)) {
-      localStorage.setItem(KEYS.WALLET, JSON.stringify({ 'mock-user-id': 5000000 })); // 50k start
+      localStorage.setItem(KEYS.WALLET, JSON.stringify({}));
     }
     if (!localStorage.getItem(KEYS.XP)) {
-      localStorage.setItem(KEYS.XP, JSON.stringify({ 'mock-user-id': { xp: 120, level: 2, trust: 65 } }));
+      localStorage.setItem(KEYS.XP, JSON.stringify({}));
     }
   }
 

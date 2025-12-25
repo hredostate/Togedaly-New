@@ -1,27 +1,21 @@
-import type { AjoBoardEntry, AjoMemberDetails, AjoHistoryPoint, AjoMemberTimelineEntry, TtfEntry, MessageTemplate, NotificationChannel, NotificationStyle } from '../types';
-import { mockAjoPayments, mockUserProfiles } from '../data/ajoMockData';
-// FIX: Corrected import to use mockLegacyPools and aliased it as mockVentures.
-import { mockLegacyPools as mockVentures } from '../data/mockData';
+import type { AjoBoardEntry, AjoMemberDetails, AjoHistoryPoint, AjoMemberTimelineEntry, TtfEntry, MessageTemplate, NotificationChannel, NotificationStyle, AjoPayment, UserProfile, LegacyPool } from '../types';
 import { enqueueNotification } from './notificationService';
 
-// --- MOCK TEMPLATE DATABASE ---
-let mockTemplates: MessageTemplate[] = [
-    { id: 'tpl-1', scope: 'global', channel: 'sms', code: 'ajo_due', tone: 'naija', name: 'Ajo Due (Naija)', body: 'Hi {{name}}, small reminder: {{title}} payment due {{due}}. No carry last.', updated_at: new Date().toISOString(), style: 'inapp_general' },
-    { id: 'tpl-2', scope: 'global', channel: 'sms', code: 'ajo_late', tone: 'strict', name: 'Ajo Late (Strict)', body: 'Reminder: {{title}} payment is overdue by {{late_count}} periods. Please settle immediately.', updated_at: new Date(Date.now() - 86400000).toISOString(), style: 'inapp_general' },
-    { id: 'tpl-3', scope: 'global', channel: 'whatsapp', code: 'ajo_due', tone: 'naija', name: 'Ajo Due WA', body: 'Hi {{name}}, {{title}} payment due {{due}}. You fit pay now to keep your streak 💪', updated_at: new Date().toISOString(), style: 'inapp_general' },
-    { id: 'tpl-4', scope: 'global', channel: 'email', code: 'ajo_due', tone: 'formal', name: 'Ajo Due Email', body: 'Dear {{name}},\nThis is a reminder that your {{title}} payment is due {{due}}.\nThank you.', updated_at: new Date().toISOString(), style: 'inapp_general' },
-];
+// In-memory stores (to be replaced with real DB)
+let ajoPayments: AjoPayment[] = [];
+let userProfiles: UserProfile[] = [];
+let ventures: LegacyPool[] = [];
+let templates: MessageTemplate[] = [];
 
 
 // --- AJO HEALTH & GROUP DETAIL ---
 
 export async function getAjoBoard(): Promise<AjoBoardEntry[]> {
     await new Promise(res => setTimeout(res, 500));
-    // FIX: Renamed `vtype` to `poolType` to match `Pool` type.
-    const ajoVenture = mockVentures.find(v => v.poolType === 'ajo');
+    const ajoVenture = ventures.find(v => v.poolType === 'ajo');
     if (!ajoVenture) return [];
 
-    const payments = mockAjoPayments;
+    const payments = ajoPayments;
     const members = Array.from(new Set(payments.map(p => p.user_id)));
     const onTimePayments = payments.filter(p => p.paid_at && new Date(p.paid_at) <= new Date(p.due_date));
     
@@ -41,7 +35,6 @@ export async function getAjoBoard(): Promise<AjoBoardEntry[]> {
 
     return [{
         group_id: ajoVenture.id,
-        // FIX: Renamed `title` to `name` to match `Pool` type.
         title: ajoVenture.name,
         created_at: new Date(Date.now() - 120 * 24 * 3600 * 1000).toISOString(),
         members: members.length,
@@ -57,8 +50,8 @@ export async function getAjoGroupDetails(groupId: string): Promise<{ board: AjoB
     await new Promise(res => setTimeout(res, 600));
     const [boardData] = await getAjoBoard();
     
-    const membersData: AjoMemberDetails[] = mockUserProfiles.slice(0, 7).map(user => {
-        const userPayments = mockAjoPayments.filter(p => p.user_id === user.id);
+    const membersData: AjoMemberDetails[] = userProfiles.slice(0, 7).map(user => {
+        const userPayments = ajoPayments.filter(p => p.user_id === user.id);
         const periods_due = userPayments.length;
         const periods_paid = userPayments.filter(p => p.paid_at).length;
         const periods_missed = userPayments.filter(p => !p.paid_at && new Date() > new Date(p.due_date)).length;
@@ -84,7 +77,7 @@ export async function getAjoGroupDetails(groupId: string): Promise<{ board: AjoB
 
 export async function getAjoMemberTimeline(groupId: string, userId: string): Promise<AjoMemberTimelineEntry[]> {
     await new Promise(res => setTimeout(res, 400));
-    const userPayments = mockAjoPayments.filter(p => p.group_id === groupId && p.user_id === userId);
+    const userPayments = ajoPayments.filter(p => p.group_id === groupId && p.user_id === userId);
     
     return userPayments.map(p => {
         let status: 'paid' | 'late' | 'due' | 'paid_late' = 'due';
@@ -114,8 +107,8 @@ export async function remindAjoMember(
     await new Promise(res => setTimeout(res, 500));
     
     // 1. Fetch Context
-    const venture = mockVentures.find(v => v.id === groupId);
-    const member = mockUserProfiles.find(u => u.id === userId);
+    const venture = ventures.find(v => v.id === groupId);
+    const member = userProfiles.find(u => u.id === userId);
     const timeline = await getAjoMemberTimeline(groupId, userId);
     
     const nextDueEntry = timeline.find(t => t.status === 'due');
@@ -131,7 +124,7 @@ export async function remindAjoMember(
 
     // 4. Resolve template
     let resolvedBody: string | null = null;
-    const template = mockTemplates.find(t => t.scope === 'global' && t.channel === channel && t.code === inferredCode && t.tone === tone);
+    const template = templates.find(t => t.scope === 'global' && t.channel === channel && t.code === inferredCode && t.tone === tone);
 
     if (template?.body) {
         resolvedBody = render(template.body, {
@@ -171,13 +164,13 @@ export async function remindAjoMember(
 export async function getTtfLeaderboard(scope: 'members' | 'groups', days: number, minPayments: number): Promise<TtfEntry[]> {
     await new Promise(res => setTimeout(res, 500));
 
-    const getTtfHours = (p: typeof mockAjoPayments[0]) => (new Date(p.paid_at!).getTime() - new Date(p.due_date).getTime()) / 3600000;
+    const getTtfHours = (p: typeof ajoPayments[0]) => (new Date(p.paid_at!).getTime() - new Date(p.due_date).getTime()) / 3600000;
 
     // FIX: Renamed `vtype` to `poolType` to match `Pool` type.
-    const ajoVenture = mockVentures.find(v => v.poolType === 'ajo')!;
+    const ajoVenture = ventures.find(v => v.poolType === 'ajo')!;
 
     if (scope === 'groups') {
-        const payments = mockAjoPayments.filter(p => p.paid_at);
+        const payments = ajoPayments.filter(p => p.paid_at);
         const avg_ttf_hours = payments.reduce((sum, p) => sum + getTtfHours(p), 0) / payments.length;
         return [{
             group_id: ajoVenture.id,
@@ -191,8 +184,8 @@ export async function getTtfLeaderboard(scope: 'members' | 'groups', days: numbe
             last_activity: new Date().toISOString(),
         }];
     } else { // members
-        return mockUserProfiles.slice(0, 7).map(user => {
-            const payments = mockAjoPayments.filter(p => p.user_id === user.id && p.paid_at);
+        return userProfiles.slice(0, 7).map(user => {
+            const payments = ajoPayments.filter(p => p.user_id === user.id && p.paid_at);
             if (payments.length < minPayments) return null;
             const avg_ttf_hours = payments.reduce((sum, p) => sum + getTtfHours(p), 0) / payments.length;
             return {
@@ -214,9 +207,9 @@ export async function getTtfLeaderboard(scope: 'members' | 'groups', days: numbe
 export async function getTtfPreview(groupId: string, userId?: string) {
      await new Promise(res => setTimeout(res, 400));
      // Return some plausible static data for the hover preview
-     const paymentsForUser = mockAjoPayments.filter(p => p.user_id === userId).slice(0,5);
+     const paymentsForUser = ajoPayments.filter(p => p.user_id === userId).slice(0,5);
      const paid = paymentsForUser.filter(p => p.paid_at);
-     const getTtfHours = (p: typeof mockAjoPayments[0]) => (new Date(p.paid_at!).getTime() - new Date(p.due_date).getTime()) / 3600000;
+     const getTtfHours = (p: typeof ajoPayments[0]) => (new Date(p.paid_at!).getTime() - new Date(p.due_date).getTime()) / 3600000;
      const avg_ttf_hours = paid.length > 0 ? paid.reduce((s, r) => s + getTtfHours(r), 0) / paid.length : null;
 
      return {
@@ -231,32 +224,32 @@ export async function getTtfPreview(groupId: string, userId?: string) {
 
 export async function getMessageTemplates(): Promise<MessageTemplate[]> {
     await new Promise(res => setTimeout(res, 300));
-    return mockTemplates;
+    return templates;
 }
 
 export async function upsertMessageTemplate(template: Omit<MessageTemplate, 'id' | 'updated_at'> & { id?: string }): Promise<MessageTemplate> {
     await new Promise(res => setTimeout(res, 500));
     if (template.id && template.id.startsWith('tpl-')) {
-        const index = mockTemplates.findIndex(t => t.id === template.id);
+        const index = templates.findIndex(t => t.id === template.id);
         if (index > -1) {
-            mockTemplates[index] = { ...mockTemplates[index], ...template, updated_at: new Date().toISOString() };
-            return mockTemplates[index];
+            templates[index] = { ...templates[index], ...template, updated_at: new Date().toISOString() };
+            return templates[index];
         }
     }
     const newTemplate = { ...template, id: `tpl-${Date.now()}`, updated_at: new Date().toISOString() } as MessageTemplate;
-    mockTemplates.push(newTemplate);
+    templates.push(newTemplate);
     return newTemplate;
 }
 
 export async function deleteMessageTemplate(id: string): Promise<void> {
     await new Promise(res => setTimeout(res, 400));
-    mockTemplates = mockTemplates.filter(t => t.id !== id);
+    templates = templates.filter(t => t.id !== id);
 }
 
 // --- NUDGES ---
 export async function getNudges(groupId: string, userId?: string, filters?: any) {
     await new Promise(res => setTimeout(res, 400));
-    const userIds = userId ? [userId] : Array.from(new Set(mockAjoPayments.filter(p => p.group_id === groupId).map(p => p.user_id)));
+    const userIds = userId ? [userId] : Array.from(new Set(ajoPayments.filter(p => p.group_id === groupId).map(p => p.user_id)));
     
     // Simulate some nudge history
     const nudges = userIds.flatMap(uid => ([

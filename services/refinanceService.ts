@@ -1,25 +1,22 @@
 import type { RefinanceRequest } from '../types';
-import { mockRefinanceRequests } from '../data/refinanceMockData';
-import { mockCollateralAccountsTP } from '../data/trustPoolMockData';
 
-let refinanceDB = [...mockRefinanceRequests];
+let refinanceDB: RefinanceRequest[] = [];
 
 /**
  * Fetches the user's total available collateral across all their pools.
  */
 export async function getAggregatedCollateral(): Promise<{ total_available_kobo: number }> {
-    console.log("MOCK: getAggregatedCollateral");
+    console.log("getAggregatedCollateral");
     await new Promise(resolve => setTimeout(resolve, 300));
-    // In a real app, this would be a SUM query on the user's collateral accounts.
-    const total = mockCollateralAccountsTP.reduce((sum, acc) => sum + acc.available_amount, 0);
-    return { total_available_kobo: total * 100 }; // convert from NGN to kobo for consistency
+    // TODO: In a real app, this would be a SUM query on the user's collateral accounts.
+    return { total_available_kobo: 0 };
 }
 
 /**
  * Fetches the user's refinance history.
  */
 export async function getRefinanceHistory(): Promise<RefinanceRequest[]> {
-    console.log("MOCK: getRefinanceHistory");
+    console.log("getRefinanceHistory");
     await new Promise(resolve => setTimeout(resolve, 400));
     return [...refinanceDB].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
@@ -28,7 +25,7 @@ export async function getRefinanceHistory(): Promise<RefinanceRequest[]> {
  * Creates a new refinance loan request.
  */
 export async function requestRefinanceLoan(amount_kobo: number, repayment_due_at: string): Promise<RefinanceRequest> {
-    console.log("MOCK: requestRefinanceLoan", { amount_kobo, repayment_due_at });
+    console.log("requestRefinanceLoan", { amount_kobo, repayment_due_at });
     await new Promise(resolve => setTimeout(resolve, 800));
 
     const { total_available_kobo } = await getAggregatedCollateral();

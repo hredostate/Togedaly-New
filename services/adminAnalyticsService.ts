@@ -1,6 +1,4 @@
 
-import { mockOrgHealth, mockOrgArrears, mockUnlockEligibility } from '../data/adminAnalyticsMockData';
-
 // TODO: Connect to real Supabase data
 // This service should query real analytics data from the database.
 // Required tables/views:
@@ -16,17 +14,17 @@ import { mockOrgHealth, mockOrgArrears, mockUnlockEligibility } from '../data/ad
 export async function getOrgHealth(orgId: string) {
     await new Promise(res => setTimeout(res, 300));
     // TODO: Replace with: return supabase.from('org_health_metrics').select('*').eq('org_id', orgId).single()
-    return mockOrgHealth;
+    return null;
 }
 
 export async function getOrgArrears(orgId: string) {
     await new Promise(res => setTimeout(res, 400));
     // TODO: Replace with: return supabase.from('org_arrears').select('*').eq('org_id', orgId).gt('amount_overdue', 0)
-    return mockOrgArrears;
+    return [];
 }
 
 export async function getUnlockEligibility(orgId: string) {
     await new Promise(res => setTimeout(res, 300));
     // TODO: Replace with: return supabase.from('unlock_eligibility').select('*').eq('org_id', orgId)
-    return mockUnlockEligibility;
+    return [];
 }

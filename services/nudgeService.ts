@@ -1,10 +1,17 @@
 import type { UserNudgePrefs, Nudge, NudgeStat, NudgeBucket, NotificationChannel as NudgeChannel } from '../types';
-import { mockUserNudgePrefs, mockNudges, mockNudgeAssignments, mockNudgeExperiments, mockNudgeOutcomes, mockNudgeTemplates } from '../data/nudgeMockData';
 
-// --- MOCK PREFERENCES ---
+// In-memory stores (to be replaced with real DB)
+let userNudgePrefs: UserNudgePrefs[] = [];
+let nudges: Nudge[] = [];
+let nudgeAssignments: Array<{ user_id: string; experiment_id: number; bucket: NudgeBucket }> = [];
+let nudgeExperiments: Array<{ id: number; key: string }> = [];
+let nudgeOutcomes: Array<{ id: number; nudge_id: number; otype: string }> = [];
+let nudgeTemplates: Array<{ id: number; key: string; payload: { user_template: string } }> = [];
+
+// --- PREFERENCES ---
 export async function getUserNudgePrefs(userId: string): Promise<Partial<UserNudgePrefs>> {
     await new Promise(res => setTimeout(res, 200));
-    const prefs = mockUserNudgePrefs.find(p => p.user_id === userId);
+    const prefs = userNudgePrefs.find(p => p.user_id === userId);
     return prefs || {
         dnd: false, quiet_start: '21:00', quiet_end: '07:00',
         allow_push: true, allow_voice: true, allow_sms: true, allow_email: true, allow_inapp: true
@@ -13,12 +20,11 @@ export async function getUserNudgePrefs(userId: string): Promise<Partial<UserNud
 
 export async function updateUserNudgePrefs(userId: string, updates: Partial<UserNudgePrefs>): Promise<UserNudgePrefs> {
     await new Promise(res => setTimeout(res, 400));
-    let prefs = mockUserNudgePrefs.find(p => p.user_id === userId);
+    let prefs = userNudgePrefs.find(p => p.user_id === userId);
     if (prefs) {
         Object.assign(prefs, updates);
         prefs.updated_at = new Date().toISOString();
     } else {
-// FIX: Added missing 'locale' property to satisfy the UserNudgePrefs type.
         prefs = {
             user_id: userId,
             dnd: false,
@@ -33,28 +39,28 @@ export async function updateUserNudgePrefs(userId: string, updates: Partial<User
             ...updates,
             updated_at: new Date().toISOString(),
         };
-        mockUserNudgePrefs.push(prefs);
+        userNudgePrefs.push(prefs);
     }
     return { ...prefs };
 }
 
-// --- MOCK A/B STATS ---
+// --- A/B STATS ---
 export async function getNudgeStats(): Promise<NudgeStat[]> {
     await new Promise(res => setTimeout(res, 600));
     const stats: NudgeStat[] = [];
 
-    for (const exp of mockNudgeExperiments) {
-        const assignments = mockNudgeAssignments.filter(a => a.experiment_id === exp.id);
+    for (const exp of nudgeExperiments) {
+        const assignments = nudgeAssignments.filter(a => a.experiment_id === exp.id);
         const buckets = Array.from(new Set(assignments.map(a => a.bucket)));
 
         for (const bucket of buckets) {
-            const nudges = mockNudges.filter(n => n.experiment_id === exp.id && n.bucket === bucket && ['sent', 'delivered'].includes(n.status));
-            const outcomes = mockNudgeOutcomes.filter(o => nudges.some(n => n.id === o.nudge_id));
+            const expNudges = nudges.filter(n => n.experiment_id === exp.id && n.bucket === bucket && ['sent', 'delivered'].includes(n.status));
+            const outcomes = nudgeOutcomes.filter(o => expNudges.some(n => n.id === o.nudge_id));
             
             const clicks = outcomes.filter(o => o.otype === 'click').length;
             const repayments = outcomes.filter(o => o.otype === 'repayment').length;
             const joins = outcomes.filter(o => o.otype === 'join_pool').length;
-            const nudges_sent = nudges.length;
+            const nudges_sent = expNudges.length;
             
             stats.push({
                 experiment_id: exp.id,
@@ -102,7 +108,7 @@ function craftNudgeText(template: string, features: any, bucket: NudgeBucket): s
 
 
 export async function sendTestNudge(userId: string, templateKey: string, channel: NudgeChannel): Promise<Nudge> {
-    console.log(`MOCK: sendTestNudge`, { userId, templateKey, channel });
+    console.log(`sendTestNudge`, { userId, templateKey, channel });
     await new Promise(res => setTimeout(res, 1000));
     
     const prefs = await getUserNudgePrefs(userId);
@@ -115,17 +121,17 @@ export async function sendTestNudge(userId: string, templateKey: string, channel
         throw new Error('User is in quiet hours.');
     }
 
-    const template = mockNudgeTemplates.find(t => t.key === templateKey);
+    const template = nudgeTemplates.find(t => t.key === templateKey);
     if (!template) throw new Error('Template not found');
 
-    const assignment = mockNudgeAssignments.find(a => a.user_id === userId) || { bucket: 'control' as NudgeBucket };
+    const assignment = nudgeAssignments.find(a => a.user_id === userId) || { bucket: 'control' as NudgeBucket };
     const text = craftNudgeText(template.payload.user_template, { first_name: 'Test User' }, assignment.bucket);
 
     const newNudge: Nudge = {
         id: Date.now(),
         user_id: userId,
         template_id: template.id,
-        experiment_id: mockNudgeExperiments[0].id,
+        experiment_id: nudgeExperiments[0]?.id || 1,
         bucket: assignment.bucket,
         channel,
         content: text,
@@ -137,7 +143,7 @@ export async function sendTestNudge(userId: string, templateKey: string, channel
         created_at: new Date().toISOString(),
         sent_at: new Date().toISOString(),
     };
-    mockNudges.push(newNudge);
+    nudges.push(newNudge);
 
     return newNudge;
 }

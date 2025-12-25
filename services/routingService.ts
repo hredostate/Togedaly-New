@@ -1,25 +1,12 @@
 
 // services/routingService.ts
-// FIX: Aliased LegacyPool to Pool.
-import type { WalletRoutingPrefs, LegacyPool as Pool, PoolType } from '../types';
-// FIX: Aliased mockLegacyPools to mockPools.
-import { mockLegacyPools as mockPools } from '../data/mockData';
+import type { WalletRoutingPrefs, PoolType } from '../types';
 import { fetchAuditLogs } from './auditService';
 
 export type RouteDecision = { dest: 'wallet' | 'ajo' | 'group_buy' | 'invest', id?: string | null, reason: string };
 
-// MOCK in-memory database for user routing preferences
-let mockRoutingPrefs: WalletRoutingPrefs[] = [
-    {
-        user_id: 'mock-user-id',
-        default_destination: 'ajo',
-        default_destination_id: 'c3d4e5f6-a7b8-9012-3456-7890abcdef01', // Community Ajo Savings
-        memo_overrides: {
-            "GROUP-COWSHARE": { dest: 'group_buy', id: 'b2c3d4e5-f6a7-8901-2345-67890abcdef0' }
-        },
-        updated_at: new Date().toISOString()
-    }
-];
+// In-memory database for user routing preferences (to be replaced with real DB)
+let routingPrefs: WalletRoutingPrefs[] = [];
 
 
 /**
@@ -38,7 +25,7 @@ export function parseNarration(narration: string | null | undefined): { tag: str
  */
 export async function decideRoute(user_id: string, narration: string): Promise<RouteDecision> {
     const hint = parseNarration(narration);
-    const prefs = mockRoutingPrefs.find(p => p.user_id === user_id);
+    const prefs = routingPrefs.find(p => p.user_id === user_id);
 
     if (hint && prefs?.memo_overrides) {
         const key = `${hint.tag}-${hint.ref}`;
@@ -74,9 +61,9 @@ export async function decideRoute(user_id: string, narration: string): Promise<R
  * Fetches routing preferences for a specific user (for admin panel).
  */
 export async function getRoutingPrefs(userId: string): Promise<WalletRoutingPrefs | null> {
-    console.log("MOCK: getRoutingPrefs for", userId);
+    console.log("getRoutingPrefs for", userId);
     await new Promise(res => setTimeout(res, 300));
-    const prefs = mockRoutingPrefs.find(p => p.user_id === userId);
+    const prefs = routingPrefs.find(p => p.user_id === userId);
     // Return a copy to avoid accidental mutation in the UI
     return prefs ? JSON.parse(JSON.stringify(prefs)) : null;
 }
@@ -85,10 +72,10 @@ export async function getRoutingPrefs(userId: string): Promise<WalletRoutingPref
  * Updates routing preferences for a specific user (for admin panel).
  */
 export async function updateRoutingPrefs(userId: string, prefs: Partial<WalletRoutingPrefs>): Promise<WalletRoutingPrefs> {
-    console.log("MOCK: updateRoutingPrefs for", userId, prefs);
+    console.log("updateRoutingPrefs for", userId, prefs);
     await new Promise(res => setTimeout(res, 500));
     
-    let existing = mockRoutingPrefs.find(p => p.user_id === userId);
+    let existing = routingPrefs.find(p => p.user_id === userId);
     if (existing) {
         Object.assign(existing, prefs, { updated_at: new Date().toISOString() });
     } else {
@@ -98,7 +85,7 @@ export async function updateRoutingPrefs(userId: string, prefs: Partial<WalletRo
             ...prefs,
             updated_at: new Date().toISOString(),
         };
-        mockRoutingPrefs.push(existing);
+        routingPrefs.push(existing);
     }
     return existing;
 }
@@ -111,10 +98,10 @@ export async function createMemoOverride(user_id: string, narration: string, des
     const key = String(narration).trim().toUpperCase().replace(/\s+/g, '-');
     if (!key) throw new Error("Narration cannot be empty.");
 
-    let userPrefs = mockRoutingPrefs.find(p => p.user_id === user_id);
+    let userPrefs = routingPrefs.find(p => p.user_id === user_id);
     if (!userPrefs) {
         userPrefs = { user_id, default_destination: 'wallet', memo_overrides: {}, updated_at: new Date().toISOString() };
-        mockRoutingPrefs.push(userPrefs);
+        routingPrefs.push(userPrefs);
     }
 
     if (!userPrefs.memo_overrides) {
@@ -124,7 +111,7 @@ export async function createMemoOverride(user_id: string, narration: string, des
     userPrefs.memo_overrides[key] = { dest, id: id || '' };
     userPrefs.updated_at = new Date().toISOString();
 
-    console.log(`MOCK: Created override for user ${user_id}. Key: ${key}, Value:`, userPrefs.memo_overrides[key]);
+    console.log(`Created override for user ${user_id}. Key: ${key}, Value:`, userPrefs.memo_overrides[key]);
 }
 
 /**
