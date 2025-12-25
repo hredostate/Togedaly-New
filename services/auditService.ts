@@ -1,17 +1,6 @@
 
 import type { AuditLog } from '../types';
-
-// Centralized immutable log store (Mocking a DB table 'audit_logs')
-const auditLogs: AuditLog[] = [
-    { 
-        id: 'aud-init', 
-        actor: 'system', 
-        action: 'system.init', 
-        target: 'platform', 
-        meta: { version: '2.0' }, 
-        created_at: new Date().toISOString() 
-    }
-];
+import { supabase } from '../supabaseClient';
 
 /**
  * Immutably records an admin or system action.
@@ -21,30 +10,47 @@ const auditLogs: AuditLog[] = [
  * @param meta Additional context (reason, previous state, etc.)
  */
 export async function logAdminAction(actor: string, action: string, target: string, meta: any = {}): Promise<void> {
-    const entry: AuditLog = {
-        id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    const entry = {
         actor,
         action,
         target,
         meta,
-        created_at: new Date().toISOString()
     };
     
-    // In a real app: await supabase.from('audit_logs').insert(entry);
+    const { error } = await supabase
+        .from('audit_logs')
+        .insert(entry);
+    
+    if (error) {
+        console.error('[AUDIT ERROR]', error);
+        throw error;
+    }
+    
     console.log(`[AUDIT] ${action} by ${actor}`, entry);
-    auditLogs.unshift(entry);
 }
 
 /**
  * Fetches the audit trail, optionally filtered.
  */
 export async function fetchAuditLogs(filters?: { action?: string, target?: string }): Promise<AuditLog[]> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    let query = supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
     
-    let logs = [...auditLogs];
-    if (filters?.action) logs = logs.filter(l => l.action === filters.action);
-    if (filters?.target) logs = logs.filter(l => l.target.includes(filters.target!));
+    if (filters?.action) {
+        query = query.eq('action', filters.action);
+    }
+    if (filters?.target) {
+        query = query.ilike('target', `%${filters.target}%`);
+    }
     
-    return logs.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const { data, error } = await query;
+    
+    if (error) {
+        console.error('[AUDIT FETCH ERROR]', error);
+        throw error;
+    }
+    
+    return (data as AuditLog[]) || [];
 }

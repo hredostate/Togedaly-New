@@ -5,65 +5,232 @@ import type { KycDocument, AdminRiskEvent, AuditLog, LegacyPool as Pool, KycLeve
 import { recordIdempotency } from './idempotencyService';
 import { decideRoute } from './routingService';
 import { logAdminAction, fetchAuditLogs } from './auditService';
+import { supabase } from '../supabaseClient';
 
-// --- IN-MEMORY DATA (to be replaced with real DB) ---
-let kycQueue: KycDocument[] = [];
-let riskEvents: AdminRiskEvent[] = [];
-let actionRequests: AdminActionRequest[] = [];
-let adminUsers: AdminUser[] = [];
-let pools: Pool[] = [];
-let incomingTransfers: IncomingTransfer[] = [];
-let treasuryPolicies: Record<string, PoolTreasuryPolicy> = {};
-let userProfiles: UserProfile[] = [];
+// --- REAL DATABASE SERVICE FUNCTIONS ---
 
-// --- MOCK SERVICE FUNCTIONS ---
+// --- REAL DATABASE SERVICE FUNCTIONS ---
+
+// ============================================================================
+// KYC QUEUE FUNCTIONS
+// ============================================================================
 
 export async function getKycQueue(): Promise<KycDocument[]> {
-    console.log("MOCK: getKycQueue");
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return kycQueue;
+    const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+    
+    if (error) throw error;
+    return data as KycDocument[];
 }
 
-export async function getPoolsForModeration(): Promise<Pool[]> {
-     console.log("MOCK: getPoolsForModeration");
-     await new Promise(resolve => setTimeout(resolve, 400));
-     return pools.filter(p => p.is_active);
+export async function approveKycDocument(docId: string, actorId: string): Promise<void> {
+    const { error } = await supabase
+        .from('kyc_documents')
+        .update({
+            status: 'approved',
+            reviewed_by: actorId,
+            reviewed_at: new Date().toISOString()
+        })
+        .eq('id', docId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'kyc.approve', `doc:${docId}`, {});
 }
 
-export async function getRiskEvents(): Promise<AdminRiskEvent[]> {
-    console.log("MOCK: getRiskEvents");
-    await new Promise(resolve => setTimeout(resolve, 600));
-    return riskEvents;
+export async function rejectKycDocument(docId: string, reason: string, actorId: string): Promise<void> {
+    const { error } = await supabase
+        .from('kyc_documents')
+        .update({
+            status: 'rejected',
+            reviewed_by: actorId,
+            reviewed_at: new Date().toISOString(),
+            rejection_reason: reason
+        })
+        .eq('id', docId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'kyc.reject', `doc:${docId}`, { reason });
 }
 
-export async function getAuditTrail(): Promise<AuditLog[]> {
-    console.log("MOCK: getAuditTrail");
-    return fetchAuditLogs();
-}
-
-export async function getUsers(): Promise<AdminUser[]> {
-    console.log("MOCK: getUsers");
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return [...adminUsers];
-}
-
-export async function updateUserRole(userId: string, newRole: UserRole, actorId: string): Promise<void> {
-    console.log(`MOCK: updateUserRole ${userId} to ${newRole} by ${actorId}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const user = adminUsers.find(u => u.id === userId);
-    if (user) {
-        const oldRole = user.role;
-        user.role = newRole;
-        await logAdminAction(actorId, 'user.update_role', `user:${userId}`, { oldRole, newRole });
+export async function reviewKycDocument(docId: string, approve: boolean, newLevel: KycLevel | null, reason: string): Promise<void> {
+    if (approve && newLevel) {
+        await approveKycDocument(docId, 'mock-admin-id');
+        // Also update user's KYC level in profiles
+        const doc = await supabase.from('kyc_documents').select('user_id').eq('id', docId).single();
+        if (doc.data) {
+            await supabase.from('profiles').update({ kyc_level: newLevel }).eq('id', doc.data.user_id);
+        }
+    } else {
+        await rejectKycDocument(docId, reason, 'mock-admin-id');
     }
 }
 
-// --- ADMIN APPROVAL REQUESTS ---
 
-export async function getAdminActionRequests(orgId: number): Promise<AdminActionRequest[]> {
-    console.log("MOCK: getAdminActionRequests", orgId);
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return actionRequests.filter(r => r.org_id === orgId && r.status === 'pending');
+// ============================================================================
+// POOL MANAGEMENT FUNCTIONS
+// ============================================================================
+
+export async function getPoolsForModeration(): Promise<Pool[]> {
+    const { data, error } = await supabase
+        .from('pools')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data as Pool[];
+}
+
+export async function updatePoolStatus(poolId: string, isActive: boolean, actorId: string): Promise<void> {
+    const { error } = await supabase
+        .from('pools')
+        .update({ is_active: isActive })
+        .eq('id', poolId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'pool.update_status', `pool:${poolId}`, { isActive });
+}
+
+export async function closePool(poolId: string, reason: string): Promise<void> {
+    const { error } = await supabase
+        .from('pools')
+        .update({ is_active: false })
+        .eq('id', poolId);
+    
+    if (error) throw error;
+    await logAdminAction('mock-admin-id', 'pool.close', `pool:${poolId.slice(0,8)}`, { reason });
+}
+
+export async function refundPool(poolId: string, reason: string): Promise<void> {
+    // In a real implementation, this would trigger refund transactions
+    await logAdminAction('mock-admin-id', 'pool.refund_all', `pool:${poolId.slice(0,8)}`, { reason });
+}
+
+
+// ============================================================================
+// RISK EVENTS FUNCTIONS
+// ============================================================================
+
+export async function getRiskEvents(filters?: { resolved?: boolean; severity?: string }): Promise<AdminRiskEvent[]> {
+    let query = supabase.from('risk_events').select('*');
+    
+    if (filters?.resolved !== undefined) {
+        query = query.eq('resolved', filters.resolved);
+    }
+    if (filters?.severity) {
+        query = query.eq('severity', filters.severity);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as AdminRiskEvent[];
+}
+
+export async function createRiskEvent(event: Omit<AdminRiskEvent, 'id' | 'created_at'>): Promise<AdminRiskEvent> {
+    const { data, error } = await supabase
+        .from('risk_events')
+        .insert(event)
+        .select()
+        .single();
+    
+    if (error) throw error;
+    return data as AdminRiskEvent;
+}
+
+export async function resolveRiskEvent(eventId: string, note: string, actorId: string = 'mock-admin-id'): Promise<void> {
+    const { error } = await supabase
+        .from('risk_events')
+        .update({
+            resolved: true,
+            resolved_by: actorId,
+            resolved_at: new Date().toISOString(),
+            resolution_note: note
+        })
+        .eq('id', eventId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'risk.resolve', `risk:${eventId}`, { note });
+}
+
+
+// ============================================================================
+// AUDIT TRAIL
+// ============================================================================
+
+export async function getAuditTrail(): Promise<AuditLog[]> {
+    return fetchAuditLogs();
+}
+
+
+// ============================================================================
+// USER MANAGEMENT FUNCTIONS
+// ============================================================================
+
+export async function getUsers(): Promise<AdminUser[]> {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, name, role, status, created_at, phone')
+        .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Map profiles to AdminUser format
+    return (data || []).map(profile => ({
+        ...profile,
+        joined_at: profile.created_at
+    })) as AdminUser[];
+}
+
+export async function createUser(user: Partial<AdminUser>): Promise<AdminUser> {
+    // Note: Creating users requires Supabase Auth API
+    // This is a placeholder for the actual implementation
+    throw new Error('User creation should be done through Supabase Auth API');
+}
+
+export async function updateUserRole(userId: string, newRole: UserRole, actorId: string): Promise<void> {
+    const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'user.update_role', `user:${userId}`, { newRole });
+}
+
+export async function deleteUser(userId: string, actorId: string): Promise<void> {
+    // Soft delete - set status to inactive
+    const { error } = await supabase
+        .from('profiles')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('id', userId);
+    
+    if (error) throw error;
+    await logAdminAction(actorId, 'user.delete', `user:${userId}`, {});
+}
+
+
+// ============================================================================
+// ADMIN APPROVAL REQUESTS (Maker-Checker Pattern)
+// ============================================================================
+
+export async function getAdminActionRequests(orgId: number, status?: AdminActionStatus): Promise<AdminActionRequest[]> {
+    let query = supabase
+        .from('admin_action_requests')
+        .select('*')
+        .eq('org_id', orgId);
+    
+    if (status) {
+        query = query.eq('status', status);
+    } else {
+        query = query.eq('status', 'pending');
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+    return data as AdminActionRequest[];
 }
 
 export async function submitAdminActionRequest(
@@ -75,31 +242,36 @@ export async function submitAdminActionRequest(
     payload: any,
     actorId: string
 ): Promise<AdminActionRequest> {
-    console.log("MOCK: submitAdminActionRequest", { actionType, payload });
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    const newReq: AdminActionRequest = {
-        id: Date.now(),
+    const newReq = {
         org_id: orgId,
         pool_id: poolId,
         action_type: actionType,
         target_table: targetTable,
         target_id: targetId,
         payload,
-        status: 'pending',
+        status: 'pending' as AdminActionStatus,
         requested_by: actorId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
     };
-    actionRequests.unshift(newReq);
-    return newReq;
+    
+    const { data, error } = await supabase
+        .from('admin_action_requests')
+        .insert(newReq)
+        .select()
+        .single();
+    
+    if (error) throw error;
+    return data as AdminActionRequest;
 }
 
 export async function approveAdminActionRequest(requestId: number, actorId: string): Promise<void> {
-    console.log("MOCK: approveAdminActionRequest", requestId);
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // First, get the request
+    const { data: req, error: fetchError } = await supabase
+        .from('admin_action_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
     
-    const req = actionRequests.find(r => r.id === requestId);
+    if (fetchError) throw fetchError;
     if (!req) throw new Error("Request not found");
     
     if (req.requested_by === actorId) {
@@ -108,104 +280,77 @@ export async function approveAdminActionRequest(requestId: number, actorId: stri
 
     // Apply the change if it's a treasury update
     if (req.action_type === 'treasury_policy_update' && req.target_table === 'pool_treasury_policy') {
-        // Update the policy for the specific pool
         const poolId = req.target_id;
-        if (!treasuryPolicies[poolId]) {
-            treasuryPolicies[poolId] = {} as PoolTreasuryPolicy;
+        
+        // Check if policy exists
+        const { data: existing } = await supabase
+            .from('pool_treasury_policies')
+            .select('*')
+            .eq('pool_id', poolId)
+            .single();
+        
+        if (existing) {
+            // Update existing policy
+            await supabase
+                .from('pool_treasury_policies')
+                .update({ ...req.payload, updated_at: new Date().toISOString() })
+                .eq('pool_id', poolId);
+        } else {
+            // Create new policy
+            await supabase
+                .from('pool_treasury_policies')
+                .insert({ pool_id: poolId, ...req.payload });
         }
-        Object.assign(treasuryPolicies[poolId], req.payload);
-        treasuryPolicies[poolId].updated_at = new Date().toISOString();
     }
 
-    req.status = 'approved';
-    req.approved_by = actorId;
-    req.updated_at = new Date().toISOString();
+    // Update the request status
+    const { error } = await supabase
+        .from('admin_action_requests')
+        .update({
+            status: 'approved',
+            approved_by: actorId,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
     
+    if (error) throw error;
     await logAdminAction(actorId, 'request.approve', `req:${requestId}`, { action_type: req.action_type });
 }
 
 export async function rejectAdminActionRequest(requestId: number, reason: string, actorId: string): Promise<void> {
-    console.log("MOCK: rejectAdminActionRequest", requestId);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const { error } = await supabase
+        .from('admin_action_requests')
+        .update({
+            status: 'rejected',
+            reject_reason: reason,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
     
-    const req = actionRequests.find(r => r.id === requestId);
-    if (!req) throw new Error("Request not found");
-
-    req.status = 'rejected';
-    req.reject_reason = reason;
-    req.updated_at = new Date().toISOString();
-    
+    if (error) throw error;
     await logAdminAction(actorId, 'request.reject', `req:${requestId}`, { reason });
 }
 
 
-// --- MOCK ADMIN ACTIONS ---
-
-export async function reviewKycDocument(docId: string, approve: boolean, newLevel: KycLevel | null, reason: string): Promise<void> {
-    console.log(`MOCK: reviewKycDocument ${docId}`, { approve, newLevel, reason });
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const doc = kycQueue.find(d => d.id === docId);
-    if (!doc) throw new Error("Document not found");
-
-    kycQueue = kycQueue.filter(d => d.id !== docId); // Remove from queue
-    
-    await logAdminAction('mock-admin-id', 'kyc.review', `doc:${docId}`, { approve, newLevel, reason });
-}
-
-export async function closePool(poolId: string, reason: string): Promise<void> {
-    console.log(`MOCK: closePool ${poolId}`, { reason });
-    await new Promise(resolve => setTimeout(resolve, 600));
-
-    const pool = pools.find(p => p.id === poolId);
-    if (!pool) throw new Error("Pool not found");
-    // In a real app, you would mutate the state. Here we just log.
-    
-    await logAdminAction('mock-admin-id', 'pool.close', `pool:${poolId.slice(0,8)}`, { reason });
-}
-
-export async function refundPool(poolId: string, reason: string): Promise<void> {
-    console.log(`MOCK: refundPool ${poolId}`, { reason });
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    
-    await logAdminAction('mock-admin-id', 'pool.refund_all', `pool:${poolId.slice(0,8)}`, { reason });
-}
-
-export async function resolveRiskEvent(eventId: string, note: string): Promise<void> {
-     console.log(`MOCK: resolveRiskEvent ${eventId}`, { note });
-     await new Promise(resolve => setTimeout(resolve, 500));
-     
-     riskEvents = riskEvents.filter(e => e.id !== eventId);
-
-     await logAdminAction('mock-admin-id', 'risk.resolve', `risk:${eventId}`, { note });
-}
+// ============================================================================
+// ENVIRONMENT CHECK
+// ============================================================================
 
 export async function checkEnvironment(): Promise<{ ok: boolean, results: { key: string, ok: boolean }[], warnings: string[] }> {
-    console.log("MOCK: checkEnvironment");
-    await new Promise(resolve => setTimeout(resolve, 300));
-    // In a real app, this check would happen on the server. We simulate it here.
+    // This check should ideally happen on the server
     const keys = [
         'NEXT_PUBLIC_SUPABASE_URL',
         'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-        'API_KEY', // for Gemini
+        'API_KEY',
         'BULKSMS_NG_TOKEN',
         'MAIL_WEBHOOK_URL',
         'NEXT_PUBLIC_BASE_URL',
     ];
 
-    // Simulate some missing keys for demonstration
-    const mockEnv: Record<string, boolean> = {
-        'NEXT_PUBLIC_SUPABASE_URL': true,
-        'NEXT_PUBLIC_SUPABASE_ANON_KEY': true,
-        'API_KEY': true,
-        'BULKSMS_NG_TOKEN': false, // Missing
-        'MAIL_WEBHOOK_URL': true,
-        'NEXT_PUBLIC_BASE_URL': false, // Missing
-    };
-
+    // Check environment variables
     const results = keys.map(key => ({
         key,
-        ok: mockEnv[key] ?? false,
+        ok: !!(import.meta.env[key] || process.env[key]),
     }));
 
     const warnings = results.filter(r => !r.ok).map(r => `${r.key} is missing`);
@@ -217,7 +362,10 @@ export async function checkEnvironment(): Promise<{ ok: boolean, results: { key:
     };
 }
 
-// --- RE-APPLY CREDIT FUNCTIONS ---
+
+// ============================================================================
+// CREDIT REAPPLY FUNCTIONS
+// ============================================================================
 
 export async function getSkippedCredits(since?: string): Promise<any[]> {
     const allLogs = await fetchAuditLogs({ action: 'wallet.credit.skipped' });
@@ -230,36 +378,56 @@ export async function getSkippedCredits(since?: string): Promise<any[]> {
     for (const a of audits) {
         const txId = a.meta?.tx_id || a.meta?.details?.tx_id;
         if (!txId) continue;
-        const it = incomingTransfers.find(t => t.paystack_tx_id === txId);
-        if (!it) continue;
-        items.push({ when: a.created_at, user: it.user_id, amount_kobo: it.amount_kobo, narration: it.narration, paystack_tx_id: it.paystack_tx_id });
+        
+        // Fetch the transfer from database
+        const { data: transfer } = await supabase
+            .from('incoming_transfers')
+            .select('*')
+            .eq('paystack_tx_id', txId)
+            .single();
+            
+        if (!transfer) continue;
+        items.push({ 
+            when: a.created_at, 
+            user: transfer.user_id, 
+            amount_kobo: transfer.amount_kobo, 
+            narration: transfer.narration, 
+            paystack_tx_id: transfer.paystack_tx_id 
+        });
     }
     return items;
 }
 
 export async function reapplyCredit(tx_id: number): Promise<{ ok: boolean, skipped?: string }> {
-    await new Promise(res => setTimeout(res, 800));
     const ok = await recordIdempotency('admin', 'reapply', String(tx_id));
     if (!ok) {
         return { ok: true, skipped: 'duplicate_reapply' };
     }
 
-    const it = incomingTransfers.find(t => t.paystack_tx_id === tx_id);
-    if (!it) throw new Error('incoming_transfer_not_found');
+    const { data: transfer, error } = await supabase
+        .from('incoming_transfers')
+        .select('*')
+        .eq('paystack_tx_id', tx_id)
+        .single();
+        
+    if (error || !transfer) throw new Error('incoming_transfer_not_found');
 
-    const route = await decideRoute(it.user_id, it.narration || '');
+    const route = await decideRoute(transfer.user_id, transfer.narration || '');
 
-    console.log(`RE-APPLYING CREDIT: ₦${it.amount_kobo / 100} to ${route.dest} for user ${it.user_id}`);
+    console.log(`RE-APPLYING CREDIT: ₦${transfer.amount_kobo / 100} to ${route.dest} for user ${transfer.user_id}`);
 
-    await logAdminAction('mock-admin-id', 'wallet.credit.reapplied', `user:${it.user_id}`, { tx_id, amount_kobo: it.amount_kobo, route });
+    await logAdminAction('mock-admin-id', 'wallet.credit.reapplied', `user:${transfer.user_id}`, { 
+        tx_id, 
+        amount_kobo: transfer.amount_kobo, 
+        route 
+    });
 
     return { ok: true };
 }
 
-// --- BULK RE-APPLY ---
-function enc(x:any){ return btoa(JSON.stringify(x)) }
-function dec(x:string){ try{ return JSON.parse(atob(x)) }catch{ return null } }
-
+// Helper functions for bulk reapply
+function enc(x: any) { return btoa(JSON.stringify(x)) }
+function dec(x: string) { try { return JSON.parse(atob(x)) } catch { return null } }
 
 export async function reapplyCreditBulk(
     since: string | undefined,
@@ -267,19 +435,17 @@ export async function reapplyCreditBulk(
     dryRun: boolean = true,
     cursor?: string
 ): Promise<any> {
-    console.log("MOCK: reapplyCreditBulk", { since, limit, dryRun, cursor });
-    
     let audits = await fetchAuditLogs({ action: 'wallet.credit.skipped' });
     audits = audits
         .filter(a => (a.meta?.reason === 'kill_switch' || a.meta?.details?.reason === 'kill_switch'))
-        .sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     if (since) {
         audits = audits.filter(a => new Date(a.created_at) >= new Date(since));
     }
     
     const cur = cursor ? dec(cursor) : null;
-    if(cur?.created_at){
+    if (cur?.created_at) {
         audits = audits.filter(a => new Date(a.created_at) < new Date(cur.created_at));
     }
 
@@ -289,10 +455,23 @@ export async function reapplyCreditBulk(
     for (const a of pageAudits) {
         const txId = a.meta?.tx_id || a.meta?.details?.tx_id;
         if (!txId) continue;
-        const it = incomingTransfers.find(t => t.paystack_tx_id === txId);
-        if (!it) continue;
-        const route = await decideRoute(it.user_id, it.narration || '');
-        candidates.push({ tx_id: txId, created_at: a.created_at, user_id: it.user_id, amount_kobo: it.amount_kobo, narration: it.narration, route });
+        
+        const { data: transfer } = await supabase
+            .from('incoming_transfers')
+            .select('*')
+            .eq('paystack_tx_id', txId)
+            .single();
+            
+        if (!transfer) continue;
+        const route = await decideRoute(transfer.user_id, transfer.narration || '');
+        candidates.push({ 
+            tx_id: txId, 
+            created_at: a.created_at, 
+            user_id: transfer.user_id, 
+            amount_kobo: transfer.amount_kobo, 
+            narration: transfer.narration, 
+            route 
+        });
     }
     
     const nextCursor = candidates.length > 0 ? enc({ created_at: candidates[candidates.length - 1].created_at }) : null;
@@ -308,9 +487,14 @@ export async function reapplyCreditBulk(
             results.push({ tx_id: c.tx_id, status: 'skipped-duplicate' });
             continue;
         }
-        // ... (simulate crediting logic)
+        // In a real implementation, this would credit the wallet
         results.push({ tx_id: c.tx_id, status: 'ok' });
-        await logAdminAction('mock-admin-id', 'wallet.credit.reapplied', `user:${c.user_id}`, { tx_id: c.tx_id, amount_kobo: c.amount_kobo, route: c.route, bulk: true });
+        await logAdminAction('mock-admin-id', 'wallet.credit.reapplied', `user:${c.user_id}`, { 
+            tx_id: c.tx_id, 
+            amount_kobo: c.amount_kobo, 
+            route: c.route, 
+            bulk: true 
+        });
     }
 
     return { ok: true, dryRun: false, processed: results.length, nextCursor, results };
