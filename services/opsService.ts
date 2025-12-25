@@ -81,5 +81,5 @@ export async function retryDlqItem(id: string): Promise<void> {
 export async function getArrearsRecords(): Promise<ArrearsRecord[]> {
     await new Promise(res => setTimeout(res, 300));
     // TODO: Replace with: return supabase.from('arrears_records').select('*').order('days_overdue', { ascending: false })
-    return mockArrearsRecords;
+    return []; // Empty array until connected to Supabase
 }

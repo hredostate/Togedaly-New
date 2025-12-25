@@ -12,7 +12,7 @@ export interface ConsolidatedTreasuryData {
 // In-memory stores (to be replaced with real DB)
 let treasuryPolicies: Record<string, PoolTreasuryPolicy> = {};
 let liquidityPositions: LiquidityPosition[] = [];
-let opsHealthData: OpsHealth = { arrears_kobo: 0, dlq_count: 0, defaults_30d: 0, refund_pending_kobo: 0 };
+let opsHealthData: OpsHealth = { org_id: '1', errors_24h: 0, warns_24h: 0 };
 
 /**
  * Fetches all treasury-related data for a specific pool.

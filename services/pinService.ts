@@ -1,3 +1,5 @@
+import { supabase } from '../supabaseClient';
+import { hashPin } from '../lib/crypto';
 
 /**
  * Verifies the user's transaction PIN.

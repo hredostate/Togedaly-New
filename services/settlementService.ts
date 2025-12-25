@@ -7,6 +7,9 @@ let payoutsDb: SupplierPayout[] = [];
 let groupBuys: GroupBuy[] = [];
 let suppliers: Supplier[] = [];
 
+// Mock data (to be replaced with Supabase queries)
+let mockGroupBuys: GroupBuy[] = [];
+
 // Simulates fetching from the v_groupbuy_supplier_balance view
 export async function getSettlementBalances(): Promise<VGroupbuySupplierBalance[]> {
     await new Promise(res => setTimeout(res, 500));

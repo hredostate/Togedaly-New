@@ -6,6 +6,10 @@ import { logAdminAction } from './auditService';
 let riskEvents: RiskEvent[] = [];
 let userRiskProfiles: UserRiskProfile[] = [];
 
+// Mock data arrays (to be replaced with Supabase queries)
+let mockKycProfiles: UserRiskProfile[] = [];
+let mockUserRiskProfiles: UserRiskProfile[] = [];
+
 /**
  * Logs a new risk event for a user. In a real app, this would be called from
  * a secure server-side environment.
