@@ -31,6 +31,24 @@ const AdminSmsConfig: React.FC = () => {
 
   const checkAdminAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
+    // ⚠️ SECURITY WARNING: Weak admin authentication
+    // Current implementation uses simple email domain check (@togedaly.com)
+    // This is NOT secure for production use:
+    // - Email can be spoofed or user can create fake account
+    // - No proper role-based access control (RBAC)
+    // - No audit logging of admin actions
+    // - Client-side check can be bypassed
+    //
+    // TODO: Replace with proper RBAC before production:
+    // Option 1: Use Supabase custom claims (requires Auth hook)
+    // Option 2: Create admin_roles table with RLS policies
+    // Option 3: Use Supabase roles (service_role, authenticated with admin flag)
+    // 
+    // Implement:
+    // - Server-side role verification in API routes
+    // - Proper permission scopes (read/write/admin)
+    // - Admin action audit logging
+    // - Multi-factor authentication for admin accounts
     const admin = user?.email?.endsWith('@togedaly.com') ?? false;
     setIsAdmin(admin);
     

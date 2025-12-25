@@ -29,7 +29,7 @@ export async function getVirtualAccounts(): Promise<VirtualAccount[]> {
         if (error) throw error;
         return data as VirtualAccount[];
     } catch (e) {
-        console.warn("DB Fetch DVA failed, using fallback", e);
+        // Fallback to local storage if DB fetch fails
         return localAccounts.filter(a => a.user_id === user.id);
     }
 }
@@ -67,7 +67,7 @@ export async function createDva(provider_slug: string): Promise<{ number: string
         const { error } = await supabase.from('virtual_accounts').insert(newVa);
         if (error) throw error;
     } catch (e) {
-        console.warn("DB Create DVA failed, using mock", e);
+        // Fallback to local mock if DB create fails
         localAccounts.push({ ...newVa, id: `va-${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
     }
     
@@ -88,6 +88,36 @@ export async function getIncomingTransfers(): Promise<IncomingTransfer[]> {
 }
 
 // --- WEBHOOK SIMULATION (Client-Side Logic for Demo) ---
+/**
+ * ⚠️ SECURITY WARNING: DEVELOPMENT/TESTING ONLY ⚠️
+ * 
+ * This function simulates webhook processing on the client-side for demo purposes.
+ * DO NOT USE IN PRODUCTION - this creates serious security vulnerabilities:
+ * 
+ * SECURITY RISKS:
+ * - No webhook signature verification (anyone can trigger fake charges)
+ * - Client-side execution allows manipulation of amounts and user IDs
+ * - No idempotency guarantees across distributed systems
+ * - Exposes business logic that should be server-side only
+ * - Can be exploited to credit accounts with fake transactions
+ * 
+ * @deprecated Use real webhook handler with signature verification in production
+ * 
+ * TODO: Before production, implement proper webhook handler:
+ * 1. Create Next.js API route: /app/api/webhooks/paystack/route.ts
+ * 2. Verify Paystack signature using their secret:
+ *    - Get signature from 'x-paystack-signature' header
+ *    - Compute HMAC SHA512 of raw request body
+ *    - Use constant-time comparison to verify
+ * 3. Implement proper idempotency using database transactions
+ * 4. Use service role key for database operations (never expose to client)
+ * 5. Add rate limiting and DDoS protection
+ * 6. Implement webhook retry logic with exponential backoff
+ * 7. Add comprehensive audit logging
+ * 8. Monitor for suspicious patterns
+ * 
+ * Reference: https://paystack.com/docs/payments/webhooks/#validate-webhook
+ */
 export async function simulateChargeSuccessWebhook(payload: any) {
     const tx = payload.data;
     const amount_kobo = tx.amount;
