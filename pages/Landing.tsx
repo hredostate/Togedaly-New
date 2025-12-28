@@ -77,7 +77,7 @@ const Landing: React.FC<LandingProps> = ({ setPage }) => {
                 <span className="px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider">ZERO INTEREST</span>
             </div>
             <div className="absolute bottom-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl">🔄</span>
+                <span className="text-8xl">💰</span>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-md">
                 🔄
@@ -113,7 +113,7 @@ const Landing: React.FC<LandingProps> = ({ setPage }) => {
                 <span className="px-3 py-1 rounded-full bg-green-600 text-white text-xs font-bold uppercase tracking-wider">LOW FEES</span>
             </div>
             <div className="absolute bottom-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl">🤝</span>
+                <span className="text-8xl">💳</span>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform duration-300 shadow-md">
                 🤝
